@@ -1,5 +1,6 @@
 // _worker.js — single-file Cloudflare Pages worker (replaces the functions/ folder).
-// Routes: POST /api/send-push, POST /api/send-email. Everything else serves the static site.
+// Routes: POST /api/send-push, /api/send-email, /api/process-referral, /api/paystack-transfer.
+// Secrets: RESEND_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON, PAYSTACK_SECRET_KEY. Everything else serves the static site.
 // Secrets needed: RESEND_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON.
 
 // functions/_lib/google.js
@@ -44,7 +45,7 @@ export async function getAccessToken(sa) {
   const header = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claim = b64url(JSON.stringify({
     iss: sa.client_email,
-    scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/firebase.messaging',
+    scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/firebase.messaging https://www.googleapis.com/auth/identitytoolkit',
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
     exp: now + 3600
@@ -304,11 +305,339 @@ function mailEscape(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/* ======================================================================================
+   SHARED HELPERS FOR REFERRAL + PAYOUT ENDPOINTS
+   ====================================================================================== */
+
+const jsonRes = (obj, status = 200) =>
+  new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
+
+// ---- Firestore REST value <-> JS ----
+function fromV(v) {
+  if (!v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return Number(v.doubleValue);
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('nullValue' in v) return null;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fromV);
+  if ('mapValue' in v) return fromFields(v.mapValue.fields || {});
+  return null;
+}
+function fromFields(fields) { const o = {}; for (const k in fields) o[k] = fromV(fields[k]); return o; }
+function toV(x) {
+  if (x === null || x === undefined) return { nullValue: null };
+  if (x instanceof Date) return { timestampValue: x.toISOString() };
+  if (typeof x === 'string') return { stringValue: x };
+  if (typeof x === 'boolean') return { booleanValue: x };
+  if (typeof x === 'number') return Number.isInteger(x) ? { integerValue: String(x) } : { doubleValue: x };
+  if (Array.isArray(x)) return { arrayValue: { values: x.map(toV) } };
+  const f = {}; for (const k in x) f[k] = toV(x[k]); return { mapValue: { fields: f } };
+}
+function toFields(obj) { const f = {}; for (const k in obj) f[k] = toV(obj[k]); return f; }
+
+async function getDocObj(base, token, path) {
+  const r = await gfetch(`${base}/${path}`, token);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('Firestore read failed: ' + JSON.stringify(r.data));
+  return { data: fromFields(r.data.fields || {}), updateTime: r.data.updateTime, name: r.data.name };
+}
+
+// Merge-style write: only the listed fields change. deleteFields removes fields. If updateTime is
+// given, the write only succeeds if the doc hasn't changed since it was read (optimistic lock).
+async function patchDoc(base, token, path, obj, { deleteFields = [], updateTime = null } = {}) {
+  const q = [];
+  for (const k of [...Object.keys(obj), ...deleteFields]) q.push('updateMask.fieldPaths=' + encodeURIComponent(k));
+  if (updateTime) q.push('currentDocument.updateTime=' + encodeURIComponent(updateTime));
+  return gfetch(`${base}/${path}?${q.join('&')}`, token, { method: 'PATCH', body: JSON.stringify({ fields: toFields(obj) }) });
+}
+const isConflict = (r) => !r.ok && (r.status === 409 || r.status === 412 || (r.data && r.data.error && /FAILED_PRECONDITION|ABORTED/.test(r.data.error.status || '')));
+
+async function addDoc(base, token, collectionPath, obj) {
+  return gfetch(`${base}/${collectionPath}`, token, { method: 'POST', body: JSON.stringify({ fields: toFields(obj) }) });
+}
+
+// Atomic server-side increment of one numeric field; returns the new value.
+async function incrementField(sa, base, token, docPath, field, amount) {
+  const docName = `projects/${sa.project_id}/databases/(default)/documents/${docPath}`;
+  const inc = Number.isInteger(amount) ? { integerValue: String(amount) } : { doubleValue: amount };
+  const r = await gfetch(`${base}:commit`, token, {
+    method: 'POST',
+    body: JSON.stringify({ writes: [{ transform: { document: docName, fieldTransforms: [{ fieldPath: field, increment: inc }] } }] })
+  });
+  if (!r.ok) throw new Error('Firestore increment failed: ' + JSON.stringify(r.data));
+  const tr = r.data.writeResults[0].transformResults[0];
+  return Number(tr.integerValue !== undefined ? tr.integerValue : tr.doubleValue);
+}
+
+// ---- Firebase ID token verification (RS256 against Google's public keys) ----
+let jwksCache = { keys: null, at: 0 };
+function b64urlToBytes(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
+}
+async function getJwks() {
+  if (jwksCache.keys && Date.now() - jwksCache.at < 3600000) return jwksCache.keys;
+  const res = await fetch('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com');
+  const data = await res.json();
+  if (!res.ok || !data.keys) throw new Error('Could not load Google signing keys');
+  jwksCache = { keys: data.keys, at: Date.now() };
+  return data.keys;
+}
+// Returns the token's claims, or throws if the token is invalid/expired/for another project.
+async function verifyIdToken(idToken, projectId) {
+  const parts = String(idToken || '').split('.');
+  if (parts.length !== 3) throw new Error('malformed');
+  const header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0])));
+  const claims = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1])));
+  if (header.alg !== 'RS256') throw new Error('bad alg');
+  const jwk = (await getJwks()).find(k => k.kid === header.kid);
+  if (!jwk) throw new Error('unknown key');
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64urlToBytes(parts[2]), new TextEncoder().encode(parts[0] + '.' + parts[1]));
+  if (!ok) throw new Error('bad signature');
+  const now = Math.floor(Date.now() / 1000);
+  if (claims.aud !== projectId) throw new Error('wrong audience');
+  if (claims.iss !== 'https://securetoken.google.com/' + projectId) throw new Error('wrong issuer');
+  if (!claims.sub || claims.exp <= now || claims.iat > now + 300) throw new Error('expired');
+  return claims;
+}
+
+// Push helper (same FCM call the send-push endpoint uses), for server-triggered notifications.
+async function pushToTokens(sa, token, tokens, title, body, url) {
+  const fcmUrl = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
+  await Promise.all(tokens.map(t => gfetch(fcmUrl, token, {
+    method: 'POST',
+    body: JSON.stringify({ message: { token: t, notification: { title, body }, data: { url: url || '/' } } })
+  }).catch(() => null)));
+}
+
+/* ======================================================================================
+   POST /api/process-referral
+   Ported from netlify/functions/process-referral.js. Called once right after a new account
+   signs up. Verifies the caller is that fresh account, then counts the referral and pays the
+   milestone reward (every 10th referral) into the referrer's wallet.
+   Safety change vs. the Netlify version: the "already processed" flag is claimed FIRST using
+   an optimistic lock, so two simultaneous calls can never both credit the same signup.
+   ====================================================================================== */
+const MILESTONE_SIZE = 10, DEFAULT_REFERRAL_FEE_GHS = 5, MAX_ACCOUNT_AGE_MS = 10 * 60 * 1000;
+
+async function handleProcessReferral({ request, env }) {
+  if (request.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405);
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return jsonRes({ skipped: true });
+
+  let payload; try { payload = await request.json(); } catch (e) { return jsonRes({ error: 'Invalid JSON body.' }, 400); }
+  const { idToken } = payload || {};
+  if (!idToken) return jsonRes({ error: 'idToken is required.' }, 400);
+
+  try {
+    const sa = parseServiceAccount(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    let claims;
+    try { claims = await verifyIdToken(idToken, sa.project_id); }
+    catch (e) { return jsonRes({ error: 'Invalid or expired session.' }, 401); }
+    const newUid = claims.sub;
+    const token = await getAccessToken(sa);
+    const base = firestoreBase(sa);
+
+    // Account must be a fresh signup. Preferred source: Firebase Auth's own creation time.
+    let createdMs = null;
+    const look = await gfetch(`https://identitytoolkit.googleapis.com/v1/projects/${sa.project_id}/accounts:lookup`, token,
+      { method: 'POST', body: JSON.stringify({ localId: [newUid] }) });
+    if (look.ok && look.data.users && look.data.users[0] && look.data.users[0].createdAt) {
+      createdMs = Number(look.data.users[0].createdAt);
+    } else {
+      console.warn('accounts:lookup unavailable, falling back to token auth_time:', JSON.stringify(look.data).slice(0, 200));
+      createdMs = (claims.auth_time || 0) * 1000;
+    }
+    if (Date.now() - createdMs > MAX_ACCOUNT_AGE_MS) return jsonRes({ error: 'This account is not a fresh signup.' }, 403);
+
+    const userPath = `users/${encodeURIComponent(newUid)}`;
+    const newUser = await getDocObj(base, token, userPath);
+    const nu = newUser ? newUser.data : {};
+    if (nu.referralProcessed) return jsonRes({ alreadyProcessed: true });
+
+    if (!nu.referredBy) {
+      await patchDoc(base, token, userPath, { referralProcessed: true });
+      return jsonRes({ noReferrer: true });
+    }
+    const referrerUid = nu.referredBy;
+    if (referrerUid === newUid) { await patchDoc(base, token, userPath, { referralProcessed: true }); return jsonRes({ noReferrer: true }); }
+
+    // Claim this signup (fails if another request got here first).
+    const claim = await patchDoc(base, token, userPath, { referralProcessed: true }, { updateTime: newUser.updateTime });
+    if (isConflict(claim)) return jsonRes({ alreadyProcessed: true });
+    if (!claim.ok) throw new Error('Could not claim referral: ' + JSON.stringify(claim.data));
+
+    const settings = await getDocObj(base, token, 'settings/global');
+    const feeGHS = (settings && settings.data.referralMilestoneFeeGHS) || DEFAULT_REFERRAL_FEE_GHS;
+
+    const referrerPath = `users/${encodeURIComponent(referrerUid)}`;
+    const referrer = await getDocObj(base, token, referrerPath);
+    if (!referrer) return jsonRes({ success: true, note: 'Referrer no longer exists.' });
+
+    const newCount = await incrementField(sa, base, token, referrerPath, 'referralCount', 1);
+    const hitMilestone = newCount % MILESTONE_SIZE === 0;
+    if (hitMilestone) {
+      await incrementField(sa, base, token, referrerPath, 'walletBalance', feeGHS);
+      try {
+        const now = new Date();
+        await addDoc(base, token, 'walletTransactions', {
+          uid: referrerUid, type: 'referral_bonus', amountGHS: feeGHS,
+          note: newCount + ' friends referred — milestone reward', createdAt: now
+        });
+        const title = '🎉 Referral milestone reached!';
+        const body = "You've referred " + newCount + ' friends — GHS ' + feeGHS + ' has been added to your wallet.';
+        await addDoc(base, token, `${referrerPath}/notifications`, {
+          type: 'payout_sent', title, text: body, url: '/#profile', fromUid: 'system', read: false, createdAt: now
+        });
+        const tokens = (referrer.data.pushTokens || []).filter(Boolean);
+        if (tokens.length) await pushToTokens(sa, token, tokens, title, body, '/#profile');
+      } catch (err) {
+        console.error('Referral milestone logging/notification failed (reward was still credited):', err);
+      }
+    }
+    return jsonRes({ success: true, referralCount: newCount, milestoneHit: hitMilestone, feeGHS: hitMilestone ? feeGHS : undefined });
+  } catch (err) {
+    console.error('process-referral error:', err);
+    return jsonRes({ error: err.message }, 500);
+  }
+}
+
+/* ======================================================================================
+   POST /api/paystack-transfer      (MOVES REAL MONEY — admin only)
+   Ported from netlify/functions/paystack-transfer.js. Same checks (valid admin ID token,
+   amount re-read from the stored request, not already paid) plus two new guards:
+     - a short "lock" so a double-tap can't send the payout twice
+     - a request that already has a Paystack transfer started can't start another one
+   Needs secrets: PAYSTACK_SECRET_KEY and FIREBASE_SERVICE_ACCOUNT_JSON.
+   ====================================================================================== */
+const NETWORK_TO_BANK_CODE = { MTN: 'MTN', Vodafone: 'VOD', AirtelTigo: 'ATL' };
+const LOCK_MS = 120000;
+
+async function handlePaystackTransfer({ request, env }) {
+  if (request.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405);
+  const PAYSTACK_SECRET_KEY = env.PAYSTACK_SECRET_KEY;
+  if (!PAYSTACK_SECRET_KEY) return jsonRes({ error: 'Automated payouts are not configured yet — PAYSTACK_SECRET_KEY is missing.' }, 500);
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return jsonRes({ error: 'Automated payouts are not configured yet — FIREBASE_SERVICE_ACCOUNT_JSON is missing.' }, 500);
+
+  let payload; try { payload = await request.json(); } catch (e) { return jsonRes({ error: 'Invalid JSON body.' }, 400); }
+  const { idToken, collection, requestId, challengeId, manualAmountGHS } = payload || {};
+  if (!idToken || !collection || !requestId) return jsonRes({ error: 'idToken, collection, and requestId are required.' }, 400);
+  if (collection !== 'withdrawalRequests' && collection !== 'challengePayoutRequests') return jsonRes({ error: 'Unknown collection.' }, 400);
+
+  let sa, token, base, claims;
+  try {
+    sa = parseServiceAccount(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    try { claims = await verifyIdToken(idToken, sa.project_id); }
+    catch (e) { return jsonRes({ error: 'Your session has expired — sign in again and retry.' }, 401); }
+    token = await getAccessToken(sa);
+    base = firestoreBase(sa);
+  } catch (err) { console.error('paystack-transfer setup error:', err); return jsonRes({ error: err.message }, 500); }
+
+  const email = (claims.email || '').toLowerCase();
+  let reqPath = `${collection}/${encodeURIComponent(requestId)}`;
+  let lockHeld = false, lockUpdateTime = null;
+
+  try {
+    const adminDoc = email ? await getDocObj(base, token, `admins/${encodeURIComponent(email)}`) : null;
+    if (!adminDoc) return jsonRes({ error: 'Only admins can trigger a payout.' }, 403);
+
+    const reqDoc = await getDocObj(base, token, reqPath);
+    if (!reqDoc) return jsonRes({ error: 'Payout request not found.' }, 404);
+    const reqData = reqDoc.data;
+    if (reqData.status === 'paid') return jsonRes({ error: 'This request has already been paid.' }, 409);
+    if (reqData.transferReference) {
+      return jsonRes({ error: 'A Paystack transfer was already started for this request (status: ' + (reqData.paystackTransferStatus || 'unknown') + '). Check your Paystack dashboard instead of sending again.' }, 409);
+    }
+    if (reqData.payoutLockAt && Date.now() - new Date(reqData.payoutLockAt).getTime() < LOCK_MS) {
+      return jsonRes({ error: 'This payout is already being sent — wait a moment and refresh.' }, 409);
+    }
+
+    const network = reqData.momoNetwork || reqData.network;
+    const momoNumber = reqData.momoNumber || reqData.number;
+    const accountName = reqData.momoAccountName || reqData.accountName;
+    const bankCode = NETWORK_TO_BANK_CODE[network];
+    if (!bankCode) return jsonRes({ error: 'Unrecognized Mobile Money network: ' + network }, 400);
+
+    let amountGHS = collection === 'challengePayoutRequests' ? reqData.amountGHS : (reqData.amountGHS || parseFloat(manualAmountGHS));
+    if (!amountGHS || isNaN(amountGHS) || amountGHS <= 0) return jsonRes({ error: 'No valid payout amount for this request.' }, 400);
+
+    // Take the lock (fails if someone else changed the doc since we read it).
+    const lock = await patchDoc(base, token, reqPath, { payoutLockAt: new Date() }, { updateTime: reqDoc.updateTime });
+    if (isConflict(lock)) return jsonRes({ error: 'This payout is already being sent — wait a moment and refresh.' }, 409);
+    if (!lock.ok) throw new Error('Could not lock payout request: ' + JSON.stringify(lock.data));
+    lockHeld = true;
+    const release = () => patchDoc(base, token, reqPath, {}, { deleteFields: ['payoutLockAt'] }).catch(() => null);
+
+    const psHeaders = { 'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' };
+    const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
+      method: 'POST', headers: psHeaders,
+      body: JSON.stringify({ type: 'mobile_money', name: accountName || reqData.gamertag || reqData.userEmail || 'Vigileon League player', account_number: momoNumber, bank_code: bankCode, currency: 'GHS' })
+    });
+    const recipientData = await recipientRes.json();
+    if (!recipientRes.ok || !recipientData.status) {
+      await release();
+      return jsonRes({ error: 'Paystack rejected the Mobile Money details: ' + (recipientData.message || 'unknown error') }, 502);
+    }
+
+    const transferRes = await fetch('https://api.paystack.co/transfer', {
+      method: 'POST', headers: psHeaders,
+      body: JSON.stringify({
+        source: 'balance', amount: Math.round(amountGHS * 100), recipient: recipientData.data.recipient_code,
+        reason: (collection === 'challengePayoutRequests' ? '1v1 challenge payout' : 'Tournament payout') + ' — Vigileon League',
+        reference: 'VGL-PAYOUT-' + requestId + '-' + Date.now()
+      })
+    });
+    const transferData = await transferRes.json();
+    if (!transferRes.ok || !transferData.status) {
+      await release();
+      return jsonRes({ error: 'Paystack could not start the transfer: ' + (transferData.message || 'unknown error') }, 502);
+    }
+
+    // From here the money is on its way — record it. 'success' = paid; 'otp'/'pending' = queued.
+    const transferStatus = transferData.data.status;
+    const updates = {
+      transferReference: transferData.data.reference, transferCode: transferData.data.transfer_code,
+      payoutMethod: 'paystack_auto', paystackTransferStatus: transferStatus,
+      status: transferStatus === 'success' ? 'paid' : 'processing'
+    };
+    if (transferStatus === 'success') updates.paidAt = new Date();
+    const fin = await patchDoc(base, token, reqPath, updates, { deleteFields: ['payoutLockAt'] });
+    lockHeld = false;
+    if (!fin.ok) console.error('CRITICAL: transfer started but request doc update failed. ref=' + transferData.data.reference, JSON.stringify(fin.data));
+
+    if (collection === 'challengePayoutRequests' && challengeId && transferStatus === 'success') {
+      await patchDoc(base, token, `challenges/${encodeURIComponent(challengeId)}`, { payoutPaid: true }).catch(() => null);
+    }
+
+    if (reqData.userId) {
+      try {
+        const u = await getDocObj(base, token, `users/${encodeURIComponent(reqData.userId)}`);
+        const tokens = ((u && u.data.pushTokens) || []).filter(Boolean);
+        if (tokens.length) {
+          await pushToTokens(sa, token, tokens,
+            transferStatus === 'success' ? 'Your payout was sent' : 'Your payout is processing',
+            transferStatus === 'success' ? `GHS ${Number(amountGHS).toFixed(2)} has been sent to your ${network} Mobile Money.` : 'Your payout is being processed and will land shortly.',
+            '/#profile');
+        }
+      } catch (e) { /* non-blocking */ }
+    }
+    return jsonRes({ success: true, status: transferStatus, reference: transferData.data.reference, amountGHS });
+  } catch (err) {
+    console.error('paystack-transfer error:', err);
+    if (lockHeld) await patchDoc(base, token, reqPath, {}, { deleteFields: ['payoutLockAt'] }).catch(() => null);
+    return jsonRes({ error: err.message }, 500);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     if (pathname === '/api/send-push') return handleSendPush({ request, env });
     if (pathname === '/api/send-email') return handleSendEmail({ request, env });
+    if (pathname === '/api/process-referral') return handleProcessReferral({ request, env });
+    if (pathname === '/api/paystack-transfer') return handlePaystackTransfer({ request, env });
     return env.ASSETS.fetch(request); // everything else = normal static site files
   }
 };

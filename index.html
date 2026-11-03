@@ -127,6 +127,16 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;overscroll-behavior-y:none;}
+  .sr-group{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:10px 10px 4px;}
+  .sr-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;cursor:pointer;}
+  .sr-item:hover,.sr-item.sr-active{background:var(--panel-2);}
+  .sr-icon{width:28px;text-align:center;font-size:17px;flex-shrink:0;}
+  .sr-title{font-size:14px;font-weight:600;}
+  .sr-sub{font-size:12px;color:var(--muted);margin-top:1px;}
+  .sr-item mark{background:rgba(200,255,61,0.35);color:inherit;border-radius:3px;padding:0 1px;}
+  .search-hit{outline:2px solid var(--lime);outline-offset:3px;border-radius:6px;transition:outline-color 0.6s;}
+  .auth-spin{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border:2px solid rgba(36,28,8,0.3);border-top-color:#241c08;border-radius:50%;animation:splashspin 0.7s linear infinite;}
+  #authSubmitBtn:disabled,#googleSignInBtn:disabled,#appleSignInBtn:disabled{cursor:wait;}
   body{
     background:var(--bg);
     color:var(--text);
@@ -712,6 +722,7 @@
       <button data-view="admin" id="adminNavBtn" style="display:none;">Admin</button>
     </nav>
     <div style="position:relative;display:flex;align-items:center;gap:10px;">
+      <span id="searchBtn" title="Search the site" role="button" aria-label="Search" style="cursor:pointer;font-size:18px;line-height:1;user-select:none;">🔍</span>
       <span id="themeToggleBtn" title="Switch light/dark mode" style="cursor:pointer;font-size:19px;line-height:1;user-select:none;">🌙</span>
       <div id="notifBellWrap" style="position:relative;cursor:pointer;display:none;">
         <span style="font-size:19px;">🔔</span>
@@ -733,6 +744,18 @@
     </div>
   </div>
 </header>
+
+<!-- SITE SEARCH — one box that searches pages, help text, tournaments, players, clans and streams. -->
+<div id="searchOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1001;align-items:flex-start;justify-content:center;padding:max(14px, env(safe-area-inset-top)) 12px 12px;">
+  <div style="width:min(620px,100%);max-height:calc(100vh - 28px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);">
+      <span style="font-size:17px;">🔍</span>
+      <input type="text" inputmode="search" enterkeyhint="search" id="searchInput" placeholder="Search tournaments, players, clans, rules…" autocomplete="off" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text,#E8EDF2);font-size:16px;font-family:'Inter',sans-serif;padding:6px 0;">
+      <span id="searchCloseBtn" style="cursor:pointer;color:var(--muted);font-size:22px;line-height:1;padding:0 4px;">&times;</span>
+    </div>
+    <div id="searchResults" style="overflow-y:auto;padding:6px;"></div>
+  </div>
+</div>
 
 <!-- 1v1 DIRECT MESSAGE (public user-to-user chat, opened from a leaderboard search) -->
 <div id="dmChatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
@@ -3063,6 +3086,23 @@ document.getElementById('forgotPasswordLink').addEventListener('click', async (e
   }
 });
 
+
+/* Shows a spinner + "busy" text on a button while an async action runs, and locks the form so
+   it can't be double-submitted. Used by email, Google and Apple sign-in. */
+function setAuthBusy(busy, label){
+  const ids = ['authSubmitBtn','googleSignInBtn','appleSignInBtn','authEmail','authPassword'];
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = busy; });
+  const btn = document.getElementById('authSubmitBtn');
+  if(busy){
+    btn.dataset.idleHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="auth-spin"></span>' + label;
+    btn.style.opacity = '0.85';
+  } else {
+    if(btn.dataset.idleHtml) btn.innerHTML = btn.dataset.idleHtml;
+    btn.style.opacity = '';
+  }
+}
+
 document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
   const email = document.getElementById('authEmail').value.trim();
   const pass = document.getElementById('authPassword').value;
@@ -3071,6 +3111,7 @@ document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
   if(!email || !pass){
     msg.classList.add('show','error'); msg.textContent='Enter an email and password.'; return;
   }
+  setAuthBusy(true, authMode==='signin' ? 'Logging you in…' : 'Creating your account…');
   try{
     if(authMode==='signin'){
       await auth.signInWithEmailAndPassword(email, pass);
@@ -3091,19 +3132,23 @@ document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
     document.getElementById('lampGate').style.display='none';
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = friendlyAuthError(err);
+  }finally{
+    setAuthBusy(false);
   }
 });
 
 document.getElementById('googleSignInBtn').addEventListener('click', async ()=>{
   const msg = document.getElementById('authMsg');
   msg.className='msg'; msg.textContent='';
-  await loginWithGoogle(msg);
+  setAuthBusy(true, 'Opening Google…');
+  try{ await loginWithGoogle(msg); } finally { setAuthBusy(false); }
 });
 
 document.getElementById('appleSignInBtn').addEventListener('click', async ()=>{
   const msg = document.getElementById('authMsg');
   msg.className='msg'; msg.textContent='';
-  await loginWithApple(msg);
+  setAuthBusy(true, 'Opening Apple…');
+  try{ await loginWithApple(msg); } finally { setAuthBusy(false); }
 });
 
 /**
@@ -3187,12 +3232,12 @@ async function saveSocialSignInProfile(cred){
 }
 
 // Fire-and-forget call to the server-side referral processor right after a brand-new account
-// is created — see netlify/functions/process-referral.js for why this can't just be done
+// is created — see _worker.js (/api/process-referral) for why this can't just be done
 // directly from here with a Firestore write (crediting another player's wallet isn't
 // something a regular client is allowed to do, correctly).
 function triggerReferralProcessing(){
   auth.currentUser.getIdToken().then(idToken=>{
-    fetch('/.netlify/functions/process-referral', {
+    fetch('/api/process-referral', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({idToken})
@@ -5206,7 +5251,7 @@ async function markWithdrawalPaid(id){
    Money number, instead of the admin having to leave the app and send it by hand. The heavy
    lifting (recipient creation, transfer, and — critically — re-verifying the caller is an
    admin and, for challenge payouts, re-reading the trustworthy stored amount) all happens
-   server-side in netlify/functions/paystack-transfer.js; this is just the button + result
+   server-side in _worker.js (/api/paystack-transfer); this is just the button + result
    handling. Tournament payouts don't have a stored amount yet, so this prompts the admin for
    one first — same trust level as the fully-manual flow today, just automating the transfer.
 */
@@ -5225,7 +5270,7 @@ async function payoutViaPaystack(collectionName, requestId, challengeId, buttonE
   if(buttonEl){ buttonEl.disabled = true; buttonEl.textContent = 'Sending…'; }
   try{
     const idToken = await currentUser.getIdToken();
-    const res = await fetch('/.netlify/functions/paystack-transfer', {
+    const res = await fetch('/api/paystack-transfer', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ idToken, collection: collectionName, requestId, challengeId, manualAmountGHS })
@@ -7061,7 +7106,7 @@ function drawCardChrome(ctx, kicker){
 
   ctx.fillStyle = '#8A93A6';
   ctx.font = "500 26px 'Inter', sans-serif";
-  ctx.fillText('vigileonleague.com  •  Free multi-game leaderboard', CARD_SIZE/2, CARD_SIZE-70);
+  ctx.fillText('league.vigileongh.com  •  Free multi-game leaderboard', CARD_SIZE/2, CARD_SIZE-70);
 }
 
 async function ensureCardFontsLoaded(){
@@ -7488,7 +7533,7 @@ function notifyPlayerReviewed(playerEmail, game, opponent, result, decision){
  *
  * @param {object} payload - must include `type`: 'feedback' | 'tournament_payout' | 'challenge_payout',
  *                           plus whatever fields that type's email template needs (see
- *                           netlify/functions/send-email.js for the exact fields each type reads).
+ *                           _worker.js (/api/send-email) for the exact fields each type reads).
  */
 function sendResendAlert(payload){
   fetch('/api/send-email', {
@@ -7834,6 +7879,7 @@ async function loadTournaments(){
         </div>
       </div>
       ${dateRange ? `<div style="margin-top:10px;font-size:12px;color:var(--cyan);font-family:'IBM Plex Mono',monospace;">${dateRange}</div>` : ''}
+      ${(!closed && (t.startsAt || t.endsAt)) ? `<div class="t-countdown" data-start="${t.startsAt||''}" data-end="${t.endsAt||''}" style="margin-top:6px;font-size:12.5px;font-weight:600;"></div>` : ''}
       <div style="margin-top:12px;font-size:13px;color:var(--muted);"><b style="color:var(--text);">Prizes:</b> ${escapeHtml(t.prizeText)}</div>
       ${t.platformFeePercent ? `<div style="margin-top:4px;font-size:11.5px;color:var(--muted);">${t.platformFeePercent}% of each entry goes to running the platform; the rest funds the prize pool.</div>` : ''}
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center;">
@@ -7856,6 +7902,7 @@ async function loadTournaments(){
     list.appendChild(card);
   }
 
+  updateTournamentCountdowns();
   renderTournamentStandingsOnLeaderboard();
 }
 
@@ -9184,6 +9231,278 @@ async function pushNotification(toUid, {type, text, challengeId, dmOtherUid, dmO
     console.log('Could not deliver notification (non-blocking):', err);
   }
 }
+
+
+/* ---------------- SITE SEARCH ----------------
+   One box that finds: pages, text inside the info pages (How It Works, Terms…), tournaments,
+   players (by gamertag — never email), clans and streams. Tournaments/players/clans/streams
+   are fetched once when the box is first used and cached for 2 minutes, so typing doesn't
+   hammer the database. */
+(function(){
+  const overlay = document.getElementById('searchOverlay');
+  const input = document.getElementById('searchInput');
+  const results = document.getElementById('searchResults');
+  const TTL = 120000;
+  let cache = { at:0, tournaments:[], players:[], clans:[], streams:[] };
+  let loadingData = null, activeIdx = -1, debounce = null;
+
+  const PAGE_KEYWORDS = {
+    leaderboard:'ranking rank top players points leaders',
+    rules:'how it works rules faq help guide',
+    tournaments:'tournament join enter prize bracket',
+    clans:'clan team squad guild',
+    streams:'stream live twitch youtube watch',
+    challenges:'1v1 challenge duel quick match stake',
+    wallet:'wallet balance top up deposit withdraw money',
+    report:'report match result score submit',
+    profile:'my matches history disputes',
+    feedback:'feedback contact support complaint suggestion',
+    confirm:'confirm results opponent',
+    terms:'terms privacy policy conditions'
+  };
+  const PAGE_ICON = {leaderboard:'🏆',rules:'📘',tournaments:'🎮',clans:'🛡️',streams:'📺',challenges:'⚔️',wallet:'💰',report:'📝',profile:'📋',feedback:'💬',confirm:'✅',terms:'📄'};
+  const norm = t => (t||'').toString().toLowerCase();
+  const esc = t => escapeHtml(String(t==null?'':t));
+
+  function hl(text, q){
+    const t = String(text||''); const i = norm(t).indexOf(q);
+    if(i<0) return esc(t);
+    return esc(t.slice(0,i)) + '<mark>' + esc(t.slice(i,i+q.length)) + '</mark>' + esc(t.slice(i+q.length));
+  }
+  function snippet(text, q){
+    const t = text.replace(/\s+/g,' ').trim(); const i = norm(t).indexOf(q);
+    if(i<0) return t.slice(0,90);
+    const a = Math.max(0,i-35), b = Math.min(t.length,i+q.length+55);
+    return (a>0?'…':'') + t.slice(a,b) + (b<t.length?'…':'');
+  }
+
+  async function loadData(){
+    if(Date.now() - cache.at < TTL) return;
+    if(loadingData) return loadingData;
+    loadingData = (async()=>{
+      const safe = p => p.then(x=>x).catch(()=>null);
+      const [t,u,c,st] = await Promise.all([
+        safe(db.collection('tournaments').get()),
+        safe(db.collection('users').limit(500).get()),
+        safe(db.collection('clans').limit(300).get()),
+        safe(db.collection('streams').limit(60).get())
+      ]);
+      const map = (snap,fn)=>{ const out=[]; if(snap) snap.forEach(d=>out.push(fn(d.id,d.data()))); return out; };
+      cache = {
+        at: Date.now(),
+        tournaments: map(t,(id,d)=>({id,name:d.name||'',game:d.game||'',fee:d.feeGHS,status:d.status,endsAt:d.endsAt})),
+        players: map(u,(id,d)=>({id,name:d.gamertag||''})).filter(p=>p.name),
+        clans: map(c,(id,d)=>({id,name:d.name||'',tag:d.tag||'',emoji:d.emoji||'🛡️'})),
+        streams: map(st,(id,d)=>({id,name:d.gamertag||'',title:d.title||'',platform:d.platform}))
+      };
+      loadingData = null;
+    })();
+    return loadingData;
+  }
+
+  function pageItems(q){
+    const out = [];
+    document.querySelectorAll('#nav button').forEach(b=>{
+      if(b.style.display==='none') return;
+      const v = b.dataset.view; const label = b.firstChild ? b.firstChild.textContent.trim() : b.textContent.trim();
+      if(norm(label).includes(q) || norm(PAGE_KEYWORDS[v]).includes(q))
+        out.push({icon:PAGE_ICON[v]||'📄', title:label, sub:'Open page', hl:label, go:()=>showView(v)});
+    });
+    if(norm('terms privacy policy conditions').includes(q) || 'terms & privacy'.includes(q))
+      out.push({icon:'📄', title:'Terms & Privacy', sub:'Open page', hl:'Terms & Privacy', go:()=>showView('terms')});
+    return out;
+  }
+
+  const TEXT_SECTIONS = ['rules','terms','challenges','feedback','report','tournaments','clans','streams','wallet'];
+  function textItems(q){
+    const out = []; const seen = new Set();
+    for(const v of TEXT_SECTIONS){
+      const sec = document.getElementById('view-'+v); if(!sec) continue;
+      const pageName = (document.querySelector('#nav button[data-view="'+v+'"]')||{}).textContent || (v==='terms'?'Terms & Privacy':v);
+      sec.querySelectorAll('h2,h3,h4,summary,li,p').forEach(el=>{
+        if(out.length>=8) return;
+        if(el.closest('#view-tournaments .card, #view-clans .card, #view-streams .stream-card, #view-challenges .card[data-id]')) return;
+        const txt = el.textContent.replace(/\s+/g,' ').trim();
+        if(txt.length<12 || txt.length>1200 || !norm(txt).includes(q)) return;
+        const key = v+txt.slice(0,50); if(seen.has(key)) return; seen.add(key);
+        out.push({icon:'📖', title:snippet(txt,q), sub:pageName.replace(/[^\w &'\-]/g,'').trim(), hl:snippet(txt,q), go:()=>{ showView(v); setTimeout(()=>flash(el),150); }});
+      });
+    }
+    return out;
+  }
+
+  function flash(el){
+    if(!el || !el.scrollIntoView) return;
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    el.classList.add('search-hit'); setTimeout(()=>el.classList.remove('search-hit'),2600);
+  }
+  // Tournaments/streams cards are drawn by the page loaders, so wait for the card to appear.
+  function flashByText(viewId, text){
+    let tries = 0;
+    const iv = setInterval(()=>{
+      tries++;
+      const sec = document.getElementById(viewId);
+      const els = sec ? sec.querySelectorAll('.card, .stream-card') : [];
+      for(const el of els){ if(el.textContent.includes(text)){ clearInterval(iv); flash(el); return; } }
+      if(tries>30) clearInterval(iv);
+    }, 200);
+  }
+
+  function dataItems(q){
+    const groups = [];
+    const T = cache.tournaments.filter(t=>norm(t.name).includes(q)||norm(t.game).includes(q)).slice(0,6).map(t=>{
+      const ended = t.endsAt && new Date(t.endsAt).getTime() < Date.now();
+      const state = (t.status==='closed'||ended) ? 'Ended' : 'Open';
+      return {icon:'🎮', title:t.name, sub:[t.game, t.fee?('GHS '+t.fee+' entry'):'Free entry', state].filter(Boolean).join(' · '), hl:t.name,
+              go:()=>{ showView('tournaments'); flashByText('view-tournaments', t.name); }};
+    });
+    const P = cache.players.filter(p=>norm(p.name).includes(q)).slice(0,6).map(p=>({icon:'👤', title:p.name, sub:'View player profile', hl:p.name, go:()=>openPlayerProfile(p.id)}));
+    const C = cache.clans.filter(c=>norm(c.name).includes(q)||norm(c.tag).includes(q)).slice(0,5).map(c=>({icon:c.emoji, title:c.name+(c.tag?' ['+c.tag+']':''), sub:'View clan', hl:c.name+(c.tag?' ['+c.tag+']':''), go:()=>openClanProfile(c.id)}));
+    const S = cache.streams.filter(x=>norm(x.name).includes(q)||norm(x.title).includes(q)).slice(0,4).map(x=>({icon:'📺', title:x.name+(x.title?' — '+x.title:''), sub:(x.platform==='twitch'?'Twitch':'YouTube')+' stream', hl:x.name+(x.title?' — '+x.title:''), go:()=>{ showView('streams'); flashByText('view-streams', x.name); }}));
+    if(T.length) groups.push(['Tournaments',T]);
+    if(P.length) groups.push(['Players',P]);
+    if(C.length) groups.push(['Clans',C]);
+    if(S.length) groups.push(['Streams',S]);
+    return groups;
+  }
+
+  let actions = [];
+  function render(q, withData){
+    actions = [];
+    const groups = [];
+    const pg = pageItems(q); if(pg.length) groups.push(['Pages',pg.slice(0,5)]);
+    if(withData) groups.push(...dataItems(q));
+    const tx = textItems(q); if(tx.length) groups.push(['In the info pages',tx]);
+    let html = '';
+    for(const [name,items] of groups){
+      html += '<div class="sr-group">'+name+'</div>';
+      for(const it of items){
+        html += '<div class="sr-item" data-i="'+actions.length+'"><div class="sr-icon">'+it.icon+'</div><div style="min-width:0;"><div class="sr-title">'+hl(it.hl||it.title,q)+'</div><div class="sr-sub">'+esc(it.sub)+'</div></div></div>';
+        actions.push(it.go);
+      }
+    }
+    if(!withData) html += '<div class="sr-group">Looking up tournaments, players and clans…</div>';
+    else if(!actions.length) html = '<div class="empty-state" style="padding:22px;">No results for “'+esc(q)+'”. Try a different word.</div>';
+    results.innerHTML = html;
+    activeIdx = -1;
+  }
+
+  async function run(){
+    const q = norm(input.value).trim();
+    if(q.length<2){ results.innerHTML = '<div class="empty-state" style="padding:22px;">Type at least 2 letters to search tournaments, players, clans, rules and more.</div>'; actions=[]; return; }
+    render(q,false);
+    await loadData();
+    if(norm(input.value).trim()===q) render(q,true);
+  }
+
+  function open(){
+    overlay.style.display='flex'; input.value=''; run();
+    setTimeout(()=>input.focus(),50);
+    loadData(); // warm the cache while the person starts typing
+  }
+  function close(){ overlay.style.display='none'; input.blur(); }
+  function choose(i){ const fn = actions[i]; if(!fn) return; close(); fn(); }
+
+  document.getElementById('searchBtn').addEventListener('click', open);
+  document.getElementById('searchCloseBtn').addEventListener('click', close);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+  results.addEventListener('click', e=>{ const it=e.target.closest('.sr-item'); if(it) choose(+it.dataset.i); });
+  input.addEventListener('input', ()=>{ clearTimeout(debounce); debounce=setTimeout(run,160); });
+  input.addEventListener('keydown', e=>{
+    const items = results.querySelectorAll('.sr-item');
+    if(e.key==='Escape'){ close(); return; }
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      e.preventDefault(); if(!items.length) return;
+      activeIdx = (activeIdx + (e.key==='ArrowDown'?1:-1) + items.length) % items.length;
+      items.forEach((n,i)=>n.classList.toggle('sr-active',i===activeIdx));
+      items[activeIdx].scrollIntoView({block:'nearest'});
+    }
+    if(e.key==='Enter'){ e.preventDefault(); choose(activeIdx>=0?activeIdx:0); }
+  });
+  document.addEventListener('keydown', e=>{
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); open(); }
+    if(e.key==='/' && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){ e.preventDefault(); open(); }
+  });
+})();
+
+
+/* ---------------- TOURNAMENT COUNTDOWNS ----------------
+   Each tournament card has a small .t-countdown line. This fills it in ("Starts in 2d 4h",
+   "Entries close in 3h 20m", "Entries closed") and refreshes every 30 seconds while the
+   page is open. Purely visual — joining rules still come from the tournament data itself. */
+function fmtCountdown(ms){
+  const m = Math.max(0, Math.floor(ms/60000));
+  const d = Math.floor(m/1440), h = Math.floor((m%1440)/60), mm = m%60;
+  if(d>0) return d+'d '+h+'h';
+  if(h>0) return h+'h '+mm+'m';
+  return Math.max(1,mm)+'m';
+}
+function updateTournamentCountdowns(){
+  const now = Date.now();
+  document.querySelectorAll('.t-countdown').forEach(el=>{
+    const start = el.dataset.start ? new Date(el.dataset.start).getTime() : null;
+    const end = el.dataset.end ? new Date(el.dataset.end).getTime() : null;
+    let text = '', color = 'var(--lime)';
+    if(start && now < start){ text = '⏳ Starts in ' + fmtCountdown(start-now); color = 'var(--cyan)'; }
+    else if(end && now < end){
+      const left = end-now;
+      text = '🔥 Entries close in ' + fmtCountdown(left);
+      color = left < 3600000 ? 'var(--danger,#ff5c5c)' : 'var(--lime)';
+    }
+    else if(end){ text = 'Entries closed'; color = 'var(--muted)'; }
+    el.textContent = text; el.style.color = color;
+  });
+}
+setInterval(updateTournamentCountdowns, 30000);
+
+/* ---------------- OFFLINE BANNER + INSTALL PROMPT ---------------- */
+(function(){
+  // Offline banner
+  const bar = document.createElement('div');
+  bar.id = 'offlineBar';
+  bar.textContent = "You're offline — showing saved content. Reconnect to play and see live updates.";
+  bar.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:#E8B94A;color:#241c08;text-align:center;font-size:12.5px;font-weight:600;padding:max(6px, env(safe-area-inset-top)) 12px 6px;';
+  document.body.appendChild(bar);
+  const sync = ()=>{ bar.style.display = navigator.onLine ? 'none' : 'block'; };
+  window.addEventListener('online', sync); window.addEventListener('offline', sync); sync();
+
+  // Install prompt
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if(standalone) return;
+  const KEY = 'vigileon_install_dismissed';
+  const dismissed = ()=>{ try{ return Date.now() - Number(localStorage.getItem(KEY)||0) < 7*86400000; }catch(e){ return false; } };
+  const remember = ()=>{ try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){} };
+  let deferred = null;
+
+  function show(html, onGo){
+    if(dismissed() || document.getElementById('installBanner')) return;
+    const b = document.createElement('div');
+    b.id = 'installBanner';
+    b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;max-width:420px;margin:0 auto;z-index:997;background:var(--panel);border:1px solid var(--lime);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+    b.innerHTML = '<div style="font-size:24px;">📲</div><div style="flex:1;font-size:12.5px;line-height:1.4;">'+html+'</div>'
+      + (onGo ? '<button class="primary" id="installGoBtn" style="width:auto;margin:0;padding:8px 14px;font-size:12.5px;">Install</button>' : '')
+      + '<span id="installNoBtn" style="cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:0 2px;">&times;</span>';
+    document.body.appendChild(b);
+    b.querySelector('#installNoBtn').onclick = ()=>{ remember(); b.remove(); };
+    if(onGo) b.querySelector('#installGoBtn').onclick = ()=>{ onGo(); b.remove(); };
+  }
+
+  // Android / Chrome / Edge: native install prompt
+  window.addEventListener('beforeinstallprompt', (e)=>{
+    e.preventDefault(); deferred = e;
+    setTimeout(()=>show('<b>Install Vigileon League</b><br><span style="color:var(--muted);">Open it like an app and get match notifications.</span>',
+      async()=>{ deferred.prompt(); try{ await deferred.userChoice; }catch(_){} deferred = null; }), 8000);
+  });
+  window.addEventListener('appinstalled', ()=>{ const b=document.getElementById('installBanner'); if(b) b.remove(); });
+
+  // iPhone/iPad Safari: no install API — show the manual steps (needed for push on iOS)
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  if(isIOS && isSafari){
+    setTimeout(()=>show('<b>Install on your iPhone</b><br><span style="color:var(--muted);">Tap <b>Share</b> <span style="font-size:15px;">⬆️</span> then <b>Add to Home Screen</b> — needed for notifications.</span>', null), 10000);
+  }
+})();
 
 let notifUnsub = null;
 let notifCache = [];
@@ -11187,7 +11506,7 @@ loadAnnouncementBanner();
 <script>
   // Registering this is required for Chrome/Android to consider the site "installable" and
   // offer the Add to Home Screen / Install app prompt with the Vigileon icon. It's a no-op
-  // service worker — it doesn't cache anything, so it can never serve stale content.
+  // service worker — it also caches the app shell so the site opens offline (page is network-first, so updates still arrive).
   if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
       navigator.serviceWorker.register('/sw.js').catch(err=>{
