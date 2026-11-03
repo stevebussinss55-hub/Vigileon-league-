@@ -6,7 +6,7 @@
 <title>VIGILEON LEAGUE — Free Gaming Leaderboard</title>
 <meta name="description" content="Vigileon League — Ghana's free skill-based gaming leaderboard. Report wins, join clans, and compete in paid tournaments & 1v1 cash challenges across eFootball, Call of Duty & more.">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://vigileonleague.netlify.app/">
+<link rel="canonical" href="https://league.vigileongh.com/">
 
 <!-- STRUCTURED DATA — helps search engines understand what this site actually is (rather
      than just guessing from the page text), which is what can make results like the site
@@ -16,12 +16,12 @@
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "Vigileon League",
-  "url": "https://vigileonleague.netlify.app/",
+  "url": "https://league.vigileongh.com/",
   "description": "A free skill-based gaming leaderboard and tournament platform for eFootball, Call of Duty, PUBG Mobile, Free Fire, FC 25, NBA 2K, Tekken, Mortal Kombat, and more — with paid tournaments and 1v1 cash challenges.",
   "publisher": {
     "@type": "Organization",
     "name": "Vigileon League",
-    "logo": "https://vigileonleague.netlify.app/icon-512.png?v=2026-09-10"
+    "logo": "https://league.vigileongh.com/icon-512.png?v=2026-09-10"
   }
 }
 </script>
@@ -33,14 +33,14 @@
 <meta property="og:site_name" content="Vigileon League">
 <meta property="og:title" content="Vigileon League — Free Gaming Leaderboard & Tournaments">
 <meta property="og:description" content="Report your wins, climb the ranks, join clans, and compete in paid tournaments across eFootball, Call of Duty & more games, with real cash prizes.">
-<meta property="og:url" content="https://vigileonleague.netlify.app">
-<meta property="og:image" content="https://vigileonleague.netlify.app/og-social-card.jpg?v=2026-09-10">
+<meta property="og:url" content="https://league.vigileongh.com">
+<meta property="og:image" content="https://league.vigileongh.com/og-social-card.jpg?v=2026-09-10">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Vigileon League — Free Gaming Leaderboard & Tournaments">
 <meta name="twitter:description" content="Report your wins, climb the ranks, join clans, and compete in paid tournaments across eFootball, Call of Duty & more games, with real cash prizes.">
-<meta name="twitter:image" content="https://vigileonleague.netlify.app/og-social-card.jpg?v=2026-09-10">
+<meta name="twitter:image" content="https://league.vigileongh.com/og-social-card.jpg?v=2026-09-10">
 
 <!-- Home screen / app-like install support -->
 <link rel="manifest" href="manifest.json">
@@ -126,7 +126,7 @@
     -webkit-text-fill-color:#101418 !important;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0;overscroll-behavior-y:none;}
   body{
     background:var(--bg);
     color:var(--text);
@@ -645,38 +645,6 @@
      any new assets. */
   .card{ transition: transform 0.18s ease, box-shadow 0.18s ease; }
   .card:hover{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
-
-  /* ================= VIGILEON LEAGUE — PREMIUM THEME (visual layer only) ================= */
-  :root{ --bg:#070A10; --panel:#0E1520; --panel-2:#141D2B; --line:#1F2A3B; --muted:#8693A5; --radius:14px; --header-bg:rgba(7,10,16,0.78); }
-  body{ background:radial-gradient(1200px 600px at 12% -10%, rgba(200,255,61,0.07), transparent 60%), radial-gradient(900px 500px at 100% 110%, rgba(52,230,216,0.07), transparent 60%), var(--bg); -webkit-font-smoothing:antialiased; letter-spacing:.005em; }
-  body.light-theme{ background:linear-gradient(180deg,#F7F9FC,#EEF2F7); }
-  header{ backdrop-filter:saturate(160%) blur(16px); -webkit-backdrop-filter:saturate(160%) blur(16px); border-bottom:1px solid rgba(255,255,255,0.06); box-shadow:0 10px 30px -18px rgba(0,0,0,0.8); }
-  .logo{ gap:11px; font-size:17px; letter-spacing:3px; font-weight:700; }
-  .logo svg{ width:34px; height:34px; flex-shrink:0; filter:drop-shadow(0 0 10px rgba(200,255,61,0.35)); }
-  .logo .wm b{ background:linear-gradient(90deg,var(--lime),var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:700; }
-  .logo .wm span{ font-weight:500; opacity:.85; margin-left:6px; letter-spacing:4px; font-size:13px; }
-  nav{ gap:2px; }
-  nav button{ border-radius:999px; font-size:12px; padding:8px 14px; letter-spacing:.8px; }
-  nav button.active{ background:linear-gradient(135deg,var(--lime),#9BEA2A); box-shadow:0 6px 18px -6px rgba(200,255,61,0.55); }
-  .scoreboard{ background:linear-gradient(160deg,rgba(24,36,52,0.9),rgba(10,15,22,0.95)); border:1px solid rgba(255,255,255,0.07); border-radius:22px; box-shadow:0 30px 60px -30px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05); }
-  .podium-card{ border-radius:16px; background:linear-gradient(180deg,var(--panel-2),var(--panel)); transition:transform .2s ease, box-shadow .2s ease; }
-  .podium-card:hover{ transform:translateY(-3px); }
-  .podium-card.rank1{ box-shadow:0 0 0 1px rgba(200,255,61,0.45), 0 18px 40px -16px rgba(200,255,61,0.35); }
-  .card{ background:linear-gradient(180deg,rgba(20,29,43,0.72),rgba(14,21,32,0.92)); border:1px solid rgba(255,255,255,0.06); box-shadow:0 14px 34px -22px rgba(0,0,0,0.9); }
-  .card::before{ opacity:.7; }
-  .card:hover{ transform:translateY(-1px); border-color:rgba(200,255,61,0.3); }
-  body.light-theme .card{ background:#fff; box-shadow:0 10px 30px -20px rgba(16,20,24,0.25); border-color:var(--line); }
-  h2{ font-size:26px; letter-spacing:-.01em; }
-  h2::after{ width:56px; }
-  th{ letter-spacing:1.5px; }
-  tbody tr{ transition:background .15s; } tbody tr:hover{ background:rgba(255,255,255,0.025); }
-  input[type=text],input[type=email],input[type=password],select{ border-radius:12px; padding:13px 14px; transition:border-color .15s, box-shadow .15s; }
-  input:focus,select:focus{ outline:none; border-color:var(--lime); box-shadow:0 0 0 3px rgba(200,255,61,0.15); }
-  .smallbtn{ border-radius:999px; padding:8px 14px; transition:.15s; } .smallbtn:hover{ transform:translateY(-1px); }
-  button:focus-visible,a:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
-  ::-webkit-scrollbar{ height:6px; width:8px; } ::-webkit-scrollbar-thumb{ background:#243044; border-radius:8px; }
-  @media (max-width:600px){ main{ padding:20px 14px 80px; } .navwrap{ padding:10px 14px; } h2{ font-size:22px; } .logo{ letter-spacing:2px; font-size:15px; } }
-  @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
@@ -726,73 +694,9 @@
   })();
 </script>
 
-<!-- PULL TO REFRESH — a custom gesture (not the browser's native one, which would just
-     reload and lose everything the SPA has already loaded) that mimics the familiar
-     Instagram/Twitter pull-down-to-reload feel. Guarded so it only engages when the page
-     itself is scrolled to the top AND the touch didn't start inside one of the app's many
-     scrollable chat windows/modals/dropdowns — otherwise scrolling up inside an open chat
-     to read earlier messages would misfire a full page reload. -->
-<div id="pullRefreshIndicator" style="position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;align-items:center;height:60px;transform:translateY(-60px);z-index:998;pointer-events:none;">
-  <div id="pullRefreshSpinner" style="width:26px;height:26px;border:3px solid rgba(200,255,61,0.25);border-top-color:#C8FF3D;border-radius:50%;"></div>
-</div>
-<script>
-  (function(){
-    var indicator = document.getElementById('pullRefreshIndicator');
-    var spinner = document.getElementById('pullRefreshSpinner');
-    var PULL_THRESHOLD = 70;
-    var MAX_PULL = 100;
-    var startY = 0, pulling = false, refreshing = false;
-
-    function isInsideScrollableOverlay(target){
-      var el = target;
-      while(el && el !== document.body){
-        var style = window.getComputedStyle(el);
-        if((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight){
-          return true;
-        }
-        el = el.parentElement;
-      }
-      return false;
-    }
-
-    document.addEventListener('touchstart', function(e){
-      if(refreshing){ pulling = false; return; }
-      if(window.scrollY > 0 || isInsideScrollableOverlay(e.target)){ pulling = false; return; }
-      startY = e.touches[0].clientY;
-      pulling = true;
-    }, {passive:true});
-
-    document.addEventListener('touchmove', function(e){
-      if(!pulling || refreshing) return;
-      var deltaY = e.touches[0].clientY - startY;
-      if(deltaY <= 0 || window.scrollY > 0){ pulling = false; indicator.style.transition = 'transform 0.2s ease'; indicator.style.transform = 'translateY(-60px)'; return; }
-      var pull = Math.min(deltaY, MAX_PULL);
-      indicator.style.transition = 'none';
-      indicator.style.transform = 'translateY(' + (pull - 60) + 'px)';
-      spinner.style.transform = 'rotate(' + (pull * 3) + 'deg)';
-    }, {passive:true});
-
-    document.addEventListener('touchend', function(){
-      if(!pulling || refreshing) return;
-      pulling = false;
-      var match = /translateY\(([-\d.]+)px\)/.exec(indicator.style.transform);
-      var currentPull = match ? parseFloat(match[1]) + 60 : 0;
-      indicator.style.transition = 'transform 0.2s ease';
-      if(currentPull >= PULL_THRESHOLD){
-        refreshing = true;
-        indicator.style.transform = 'translateY(0)';
-        spinner.style.animation = 'splashspin 0.7s linear infinite';
-        setTimeout(function(){ window.location.reload(); }, 350);
-      } else {
-        indicator.style.transform = 'translateY(-60px)';
-      }
-    });
-  })();
-</script>
-
 <header>
   <div class="navwrap">
-    <div class="logo" aria-label="Vigileon League"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="vlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C8FF3D"/><stop offset="1" stop-color="#34E6D8"/></linearGradient></defs><path d="M20 2.5 35 8v11.5c0 8.6-6 15.2-15 18-9-2.8-15-9.4-15-18V8z" fill="#0B1118" stroke="url(#vlg)" stroke-width="2"/><path d="M12 13l8 15 8-15" fill="none" stroke="url(#vlg)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm"><b>VIGILEON</b><span>LEAGUE</span></span></div>
+    <div class="logo"><span class="dot"></span>VIGILEON LEAGUE</div>
     <nav id="nav">
       <button data-view="leaderboard" class="active">Leaderboard</button>
       <button data-view="rules">How It Works</button>
@@ -3288,7 +3192,7 @@ async function saveSocialSignInProfile(cred){
 // something a regular client is allowed to do, correctly).
 function triggerReferralProcessing(){
   auth.currentUser.getIdToken().then(idToken=>{
-    fetch('/api/fn/process-referral', {
+    fetch('/.netlify/functions/process-referral', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({idToken})
@@ -5321,7 +5225,7 @@ async function payoutViaPaystack(collectionName, requestId, challengeId, buttonE
   if(buttonEl){ buttonEl.disabled = true; buttonEl.textContent = 'Sending…'; }
   try{
     const idToken = await currentUser.getIdToken();
-    const res = await fetch('/api/fn/paystack-transfer', {
+    const res = await fetch('/.netlify/functions/paystack-transfer', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ idToken, collection: collectionName, requestId, challengeId, manualAmountGHS })
@@ -7578,7 +7482,7 @@ function notifyPlayerReviewed(playerEmail, game, opponent, result, decision){
 
 /**
  * Admin alert for feedback and payout requests, sent server-side via Resend (through the
- * netlify/functions/send-email.js function) rather than client-side EmailJS — kept as one
+ * functions/api/send-email.js Cloudflare Pages Function) rather than client-side EmailJS — kept as one
  * consistent path for these three actions instead of mixing two different email services.
  * Match submission/review notifications above are unrelated and still use EmailJS as before.
  *
@@ -7587,7 +7491,7 @@ function notifyPlayerReviewed(playerEmail, game, opponent, result, decision){
  *                           netlify/functions/send-email.js for the exact fields each type reads).
  */
 function sendResendAlert(payload){
-  fetch('/api/fn/send-email', {
+  fetch('/api/send-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -7598,7 +7502,7 @@ function sendResendAlert(payload){
 }
 
 /**
- * Sends a push notification via netlify/functions/send-push.js — this replaced the old
+ * Sends a push notification via functions/api/send-push.js — this replaced the old
  * Firebase Cloud Functions approach so the whole project can stay on Firebase's free Spark
  * plan (Cloud Functions specifically required the paid Blaze plan; nothing else did).
  * Called directly at the moment something happens, same pattern as sendResendAlert above.
@@ -7607,7 +7511,7 @@ function sendResendAlert(payload){
  *                            uid is required when target is 'player'.
  */
 function sendPushNotification(payload){
-  fetch('/api/fn/send-push', {
+  fetch('/api/send-push', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
