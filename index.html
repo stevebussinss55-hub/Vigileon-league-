@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>VIGILEON LEAGUE — Free Gaming Leaderboard</title>
-<meta name="description" content="Vigileon League — Ghana's free skill-based gaming leaderboard. Report wins, join clans, and compete in paid tournaments & 1v1 cash challenges across eFootball, Call of Duty & more.">
+<title>VIGILEON LEAGUE — Tournaments &amp; 1v1 Challenges</title>
+<meta name="description" content="Vigileon League — Ghana's skill-based gaming platform. Join paid tournaments, challenge players head-to-head for cash, join clans, and track results across eFootball, Call of Duty &amp; more.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://league.vigileongh.com/">
 
@@ -17,7 +17,7 @@
   "@type": "WebSite",
   "name": "Vigileon League",
   "url": "https://league.vigileongh.com/",
-  "description": "A free skill-based gaming leaderboard and tournament platform for eFootball, Call of Duty, PUBG Mobile, Free Fire, FC 25, NBA 2K, Tekken, Mortal Kombat, and more — with paid tournaments and 1v1 cash challenges.",
+  "description": "A skill-based gaming platform and tournament hub for eFootball, Call of Duty, PUBG Mobile, Free Fire, FC 25, NBA 2K, Tekken, Mortal Kombat, and more — with paid tournaments and 1v1 cash challenges.",
   "publisher": {
     "@type": "Organization",
     "name": "Vigileon League",
@@ -31,14 +31,14 @@
      up as a bare, empty-looking link. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Vigileon League">
-<meta property="og:title" content="Vigileon League — Free Gaming Leaderboard & Tournaments">
+<meta property="og:title" content="Vigileon League — Tournaments &amp; 1v1 Challenges">
 <meta property="og:description" content="Report your wins, climb the ranks, join clans, and compete in paid tournaments across eFootball, Call of Duty & more games, with real cash prizes.">
 <meta property="og:url" content="https://league.vigileongh.com">
 <meta property="og:image" content="https://league.vigileongh.com/og-social-card.jpg?v=2026-09-10">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Vigileon League — Free Gaming Leaderboard & Tournaments">
+<meta name="twitter:title" content="Vigileon League — Tournaments &amp; 1v1 Challenges">
 <meta name="twitter:description" content="Report your wins, climb the ranks, join clans, and compete in paid tournaments across eFootball, Call of Duty & more games, with real cash prizes.">
 <meta name="twitter:image" content="https://league.vigileongh.com/og-social-card.jpg?v=2026-09-10">
 
@@ -310,13 +310,13 @@
   h2::after{
     content:'';
     position:absolute;
-    left:0; bottom:0;
-    width:46px; height:3px;
+    left:0; right:0; bottom:0;
+    height:3px;
     border-radius:3px;
     background:linear-gradient(90deg, var(--lime), var(--cyan));
     box-shadow:0 0 10px rgba(200,255,61,0.5);
   }
-  .subtitle{color:var(--muted);font-size:13px;margin:0 0 22px;}
+  .subtitle{color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 22px;}
 
   .card{
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
@@ -364,16 +364,17 @@
   .game-other{background:rgba(124,136,150,0.12);color:var(--muted);}
 
   label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px;font-weight:600;letter-spacing:0.3px;}
-  input[type=text],input[type=email],input[type=password],select{
+  input[type=text],input[type=email],input[type=password],select,textarea{
     width:100%;background:var(--panel-2);border:1px solid var(--line);
-    color:#E8EDF2;caret-color:#E8EDF2;-webkit-text-fill-color:#E8EDF2;
+    color:var(--text);caret-color:var(--text);-webkit-text-fill-color:var(--text);
     padding:11px 12px;border-radius:8px;font-size:14px;
     font-family:'Inter',sans-serif;
   }
+  textarea{resize:vertical;min-height:80px;line-height:1.5;}
   input[type=text]:-webkit-autofill,
   input[type=email]:-webkit-autofill,
   input[type=password]:-webkit-autofill{
-    -webkit-text-fill-color:#E8EDF2 !important;
+    -webkit-text-fill-color:var(--text) !important;
     -webkit-box-shadow:0 0 0 1000px var(--panel-2) inset !important;
     transition:background-color 9999s ease-in-out 0s;
   }
@@ -618,7 +619,10 @@
   }
   .configwarn code{background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:4px;}
 
-  footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 20px;font-family:'IBM Plex Mono',monospace;}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 20px 36px;font-family:'IBM Plex Mono',monospace;line-height:1.7;}
+  .foot-nav{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:12px 0 10px;}
+  .foot-nav a{color:var(--muted);text-decoration:none;font-size:12px;}
+  .foot-nav a:hover{color:var(--cyan);text-decoration:underline;}
 
   @media(max-width:640px){
     .podium{flex-direction:column;}
@@ -645,6 +649,8 @@
   .hero p{color:var(--muted);font-size:16px;line-height:1.6;margin:0 0 26px;max-width:520px;}
   .hero-cta{display:flex;gap:12px;flex-wrap:wrap;}
   .hero-cta button{width:auto;margin:0;padding:13px 24px;font-size:14.5px;}
+  .hero-trust{margin:18px 0 0;font-size:12.5px;color:var(--muted);line-height:1.5;max-width:520px;}
+  .hero-trust b{color:var(--text);font-weight:600;}
   .hero-art{display:flex;justify-content:center;}
   .hero-art img{width:100%;max-width:360px;aspect-ratio:1;object-fit:cover;border-radius:26px;box-shadow:0 24px 70px rgba(0,0,0,0.5),0 0 70px rgba(200,255,61,0.14);border:1px solid var(--line);}
   @media(max-width:860px){
@@ -662,7 +668,7 @@
 
   /* ---------- LOGIN / SIGN-UP SCREEN ---------- */
   body.auth-open{overflow:hidden;}
-  .auth-screen{position:fixed;inset:0;z-index:1004;background:var(--bg);overflow-y:auto;}
+  .auth-screen{position:fixed;inset:0;z-index:1004;background:var(--bg);overflow-x:auto;overflow-y:auto;}
   .auth-shell{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:100%;}
   .auth-brand{
     position:relative;overflow:hidden;padding:56px 56px 48px;display:flex;flex-direction:column;justify-content:center;gap:22px;color:#E8EDF2;
@@ -718,15 +724,32 @@
     .auth-card h2{font-size:25px;}
   }
 
-  /* ---------- SPLASH ---------- */
-  .splash-bg{position:absolute;inset:-60px;background-size:cover;background-position:center;filter:blur(40px) brightness(0.42) saturate(1.25);}
-  .splash-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:24px;}
-  .splash-img{height:min(66vh,620px);width:auto;max-width:92vw;object-fit:contain;border-radius:22px;box-shadow:0 30px 90px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.08);animation:splashIn .7s ease both;}
-  .splash-bar{width:min(240px,60vw);height:4px;border-radius:4px;background:rgba(255,255,255,0.16);overflow:hidden;}
+  /* ---------- SPLASH — full-bleed cover on iPhone, Android, and desktop ---------- */
+  #splashScreen{
+    position:fixed;inset:0;z-index:99999;background:#0B0F14;
+    transition:opacity 0.5s ease;overflow:hidden;
+    width:100%;height:100%;
+    min-height:100vh;min-height:100dvh;min-height:-webkit-fill-available;
+  }
+  .splash-cover{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:center center;
+    display:block;animation:splashIn .85s ease both;
+  }
+  .splash-shade{
+    position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to top, rgba(11,15,20,0.92) 0%, rgba(11,15,20,0.45) 28%, rgba(11,15,20,0.12) 55%, transparent 72%);
+  }
+  .splash-footer{
+    position:absolute;left:0;right:0;bottom:0;z-index:2;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    padding:0 max(24px, env(safe-area-inset-right)) max(32px, calc(env(safe-area-inset-bottom) + 20px)) max(24px, env(safe-area-inset-left));
+  }
+  .splash-bar{width:min(280px,72vw);height:4px;border-radius:4px;background:rgba(255,255,255,0.22);overflow:hidden;}
   .splash-bar span{display:block;height:100%;width:40%;border-radius:4px;background:linear-gradient(90deg,#C8FF3D,#34E6D8);animation:splashBar 1.3s ease-in-out infinite;}
-  .splash-text{color:#E8EDF2;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;opacity:.85;font-family:'IBM Plex Mono',monospace;}
+  .splash-text{color:#fff;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;opacity:.9;font-family:'IBM Plex Mono',monospace;text-shadow:0 1px 8px rgba(0,0,0,0.6);}
   @keyframes splashBar{0%{transform:translateX(-110%);}100%{transform:translateX(260%);}}
-  @keyframes splashIn{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:none;}}
+  @keyframes splashIn{from{opacity:0;transform:scale(1.03);}to{opacity:1;transform:none;}}
 
 
   /* ---------------- SECTION BANNERS ----------------
@@ -814,11 +837,11 @@
 <!-- SPLASH SCREEN — shown the moment the app opens (from the home screen icon or a fresh
      browser load), stays for a few seconds while the real page loads underneath, then
      fades out on its own. Sits on top of everything via a very high z-index. -->
-<div id="splashScreen" style="position:fixed;inset:0;z-index:99999;background:#0B0F14;transition:opacity 0.5s ease;overflow:hidden;">
-  <div class="splash-bg" style="background-image:url('/splash.jpg?v=2026-09-10');"></div>
-  <div class="splash-center">
-    <img class="splash-img" src="/splash.jpg?v=2026-09-10" alt="Vigileon League">
-    <div class="splash-bar"><span></span></div>
+<div id="splashScreen" aria-live="polite" aria-busy="true" aria-label="Loading Vigileon League">
+  <img class="splash-cover" src="/splash.jpg?v=2026-11-04" alt="">
+  <div class="splash-shade" aria-hidden="true"></div>
+  <div class="splash-footer">
+    <div class="splash-bar" role="progressbar" aria-label="Loading"><span></span></div>
     <div class="splash-text">Loading</div>
   </div>
 </div>
@@ -884,7 +907,7 @@
   </div>
   <nav id="nav">
     <div class="nav-group">Play</div>
-    <button data-view="leaderboard" class="active"><span class="nav-ico">🏆</span><span class="nav-label">Leaderboard</span></button>
+    <button data-view="leaderboard" class="active"><span class="nav-ico">🏠</span><span class="nav-label">Home</span></button>
     <button data-view="tournaments"><span class="nav-ico">🎮</span><span class="nav-label">Tournaments</span></button>
     <button data-view="challenges"><span class="nav-ico">⚔️</span><span class="nav-label">1v1 Challenges</span><span id="challengesNavBadge" class="nav-badge" style="display:none;"></span></button>
     <button data-view="clans"><span class="nav-ico">🛡️</span><span class="nav-label">Clans</span></button>
@@ -935,7 +958,7 @@
     </div>
     <div id="dmChatMessages" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:50vh;"></div>
     <div style="padding:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;">
-      <input type="text" id="dmChatInput" placeholder="Type a message…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:#E8EDF2;caret-color:#E8EDF2;-webkit-text-fill-color:#E8EDF2;font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
+      <input type="text" id="dmChatInput" placeholder="Type a message…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:var(--text);caret-color:var(--text);-webkit-text-fill-color:var(--text);font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
       <button id="dmChatSendBtn" class="primary" style="align-self:flex-end;padding:8px 18px;white-space:nowrap;">Send</button>
     </div>
   </div>
@@ -965,7 +988,7 @@
     <div style="padding:16px;overflow-y:auto;">
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px;">Explain why this result is wrong, and upload your own screenshot as counter-proof. The admin will compare both before deciding.</p>
       <label>Reason for disputing (required)</label>
-      <textarea id="disputeReasonInput" rows="4" placeholder="e.g. This never happened — I won 3-1, not lost 1-3. See my screenshot." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:#E8EDF2;font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
+      <textarea id="disputeReasonInput" rows="4" placeholder="e.g. This never happened — I won 3-1, not lost 1-3. See my screenshot." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
       <label style="margin-top:12px;display:block;">Your counter-proof screenshot (required)</label>
       <input type="file" id="disputeProofFile" accept="image/*">
       <div id="disputeProofPreview" style="margin-top:8px;"></div>
@@ -1001,7 +1024,7 @@
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px;">Your opponent disputed your reported result — here's their reason and counter-proof. You can add your own comment or extra evidence before the admin makes a final call. Once you respond (or after a short window), a 24-hour cool-off period starts before an admin will resolve it, giving both sides time to add anything else relevant.</p>
       <div id="disputeResponseTheirSide" style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;"></div>
       <label>Your response (optional)</label>
-      <textarea id="disputeResponseInput" rows="3" placeholder="Add anything that supports your original report." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:#E8EDF2;font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
+      <textarea id="disputeResponseInput" rows="3" placeholder="Add anything that supports your original report." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
       <label style="margin-top:12px;display:block;">Additional evidence screenshot (optional)</label>
       <input type="file" id="disputeResponseProofFile" accept="image/*">
       <div id="disputeResponseProofPreview" style="margin-top:8px;"></div>
@@ -1024,7 +1047,7 @@
   </div>
   <div id="aiMessages" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:220px;max-height:420px;"></div>
   <div style="padding:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;">
-    <input type="text" id="aiInput" placeholder="Ask Vigileon AI…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:#E8EDF2;caret-color:#E8EDF2;-webkit-text-fill-color:#E8EDF2;font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
+    <input type="text" id="aiInput" placeholder="Ask Vigileon AI…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:var(--text);caret-color:var(--text);-webkit-text-fill-color:var(--text);font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
     <button id="aiSendBtn" class="primary" style="align-self:flex-end;padding:8px 18px;white-space:nowrap;">Send</button>
   </div>
 </div>
@@ -1047,7 +1070,7 @@
     </div>
     <div id="challengeChatMessages" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:50vh;"></div>
     <div style="padding:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;">
-      <input type="text" id="challengeChatInput" placeholder="Message your opponent…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:#E8EDF2;caret-color:#E8EDF2;-webkit-text-fill-color:#E8EDF2;font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
+      <input type="text" id="challengeChatInput" placeholder="Message your opponent…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:var(--text);caret-color:var(--text);-webkit-text-fill-color:var(--text);font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
       <button id="challengeChatSendBtn" class="primary" style="align-self:flex-end;padding:8px 18px;white-space:nowrap;">Send</button>
     </div>
   </div>
@@ -1067,7 +1090,7 @@
     </div>
     <div id="lobbyChatMessages" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:50vh;"></div>
     <div style="padding:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;">
-      <input type="text" id="lobbyChatInput" placeholder="Say something to the lobby…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:#E8EDF2;caret-color:#E8EDF2;-webkit-text-fill-color:#E8EDF2;font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
+      <input type="text" id="lobbyChatInput" placeholder="Say something to the lobby…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:var(--text);caret-color:var(--text);-webkit-text-fill-color:var(--text);font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
       <button id="lobbyChatSendBtn" class="primary" style="align-self:flex-end;padding:8px 18px;white-space:nowrap;">Send</button>
     </div>
   </div>
@@ -1131,7 +1154,7 @@
     </div>
     <div style="padding:16px;overflow-y:auto;">
       <label>What happened? (required)</label>
-      <textarea id="reportPlayerReason" rows="4" placeholder="e.g. Used abusive language in voice chat, threatened me after losing, etc." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:#E8EDF2;font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
+      <textarea id="reportPlayerReason" rows="4" placeholder="e.g. Used abusive language in voice chat, threatened me after losing, etc." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
       <div class="msg" id="reportPlayerMsg"></div>
       <button class="primary" id="reportPlayerSubmitBtn" style="margin-top:14px;">Submit report</button>
     </div>
@@ -1152,6 +1175,7 @@
           <button class="primary" onclick="showView('tournaments')">Browse tournaments</button>
           <button class="ghost" onclick="showView('challenges')">Find a 1v1 challenge</button>
         </div>
+        <p class="hero-trust"><b>Payments secured by Paystack</b> · Mobile Money payouts in Ghana · Tournament standings live on each tournament page</p>
       </div>
       <div class="hero-art"><img src="/icon-512.png?v=2026-09-10" alt="Vigileon League"></div>
     </section>
@@ -1198,8 +1222,8 @@
 
     <button class="ghost" style="width:100%;margin-bottom:24px;" onclick="shareInvite()">📤 Invite friends on WhatsApp</button>
 
-    <h2>🟢 Online Now</h2>
-    <p class="subtitle">Everyone currently active on Vigileon League — like your friends list in a game lobby.</p>
+    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--green);"><circle cx="12" cy="12" r="6" fill="var(--green)" stroke="none"/></svg>Online Now</h2>
+    <p class="subtitle">Everyone currently active on Vigileon League — like your friends list in a game lobby. Points and ranks are tracked per tournament, not on this page.</p>
     <div class="card">
       <div id="onlineNowList"></div>
       <div class="empty-state" id="onlineNowEmpty" style="display:none;">No one else is online right now.</div>
@@ -1238,7 +1262,7 @@
 
   <!-- PLAYER PROFILE (opened by tapping a name) -->
   <section class="section" id="view-playerprofile">
-    <button class="ghost" onclick="showView('leaderboard')" style="margin-bottom:20px;">← Back to Leaderboard</button>
+    <button class="ghost" onclick="showView('leaderboard')" style="margin-bottom:20px;">← Back to Home</button>
     <div id="playerProfileContent"></div>
   </section>
 
@@ -1498,13 +1522,16 @@
 
   <!-- TOURNAMENTS -->
   <section class="section" id="view-tournaments">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><rect x="3" y="4" width="7" height="6" rx="1"/><rect x="14" y="4" width="7" height="6" rx="1"/><rect x="8.5" y="15" width="7" height="6" rx="1"/><path d="M6.5 10v3a2 2 0 0 0 2 2h1M17.5 10v3a2 2 0 0 1-2 2h-1"/></svg>Tournaments</h2>
-    <p class="subtitle">Pay a one-time entry fee to join. Prizes are fixed and published upfront by the organizer — this is a skill contest with a published prize structure, not a bet against another player.</p>
-    <img src="/tournament-banner.jpg" alt="Vigileon League Tournaments" style="width:100%;max-width:420px;display:block;margin:0 auto 22px;border-radius:14px;border:1px solid var(--line);">
-    <div style="display:flex;gap:10px;max-width:420px;margin:0 auto 22px;">
-      <img src="/tournament-banner-2.jpg" alt="eFootball Grand Final" style="width:50%;border-radius:12px;border:1px solid var(--line);object-fit:cover;">
-      <img src="/tournament-banner-3.jpg" alt="Call of Duty Tournament" style="width:50%;border-radius:12px;border:1px solid var(--line);object-fit:cover;">
+    <div class="section-banner banner-tournaments">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">🏆</div>
+        <div>
+          <h3 class="section-banner-title">Tournaments</h3>
+          <p class="section-banner-sub">Pay a one-time entry fee to join. Prizes are fixed and published upfront by the organizer — a skill contest with a published prize structure, not a bet against another player.</p>
+        </div>
+      </div>
     </div>
+    <img src="/tournament-banner.jpg" alt="Vigileon League Tournaments" style="width:100%;max-width:520px;display:block;margin:0 auto 22px;border-radius:14px;border:1px solid var(--line);">
 
     <div class="card" id="createTournamentCard" style="display:none;">
       <h3 style="margin:0 0 14px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);" id="tournamentFormTitle">Create a tournament</h3>
@@ -1564,10 +1591,16 @@
 
   <!-- 1v1 CHALLENGES -->
   <section class="section" id="view-challenges">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><path d="M6 9a6 6 0 0 1 12 0c0 2-1 3-2 4l-1 3H9l-1-3c-1-1-2-2-2-4z"/><path d="M9 21h6"/></svg>1v1 Challenges</h2>
-    <p class="subtitle">Challenge another player head-to-head. You both stake the same amount, play your match, and the winner takes the pot — minus Vigileon's <span id="chFeeNote">fee</span>.</p>
-    <img src="/challenge-banner.jpg" alt="Vigileon League 1v1 Challenges" style="width:100%;max-width:420px;display:block;margin:0 auto 22px;border-radius:14px;border:1px solid var(--line);">
-    <img src="/challenge-banner-2.jpg" alt="Call of Duty 1v1 Duel" style="width:100%;max-width:420px;display:block;margin:0 auto 22px;border-radius:12px;border:1px solid var(--line);object-fit:cover;">
+    <div class="section-banner banner-challenges">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">⚔️</div>
+        <div>
+          <h3 class="section-banner-title">1v1 Challenges</h3>
+          <p class="section-banner-sub">Challenge another player head-to-head. You both stake the same amount, play your match, and the winner takes the pot — minus Vigileon's <span id="chFeeNote">fee</span>.</p>
+        </div>
+      </div>
+    </div>
+    <img src="/challenge-banner.jpg" alt="Vigileon League 1v1 Challenges" style="width:100%;max-width:520px;display:block;margin:0 auto 22px;border-radius:14px;border:1px solid var(--line);">
 
     <div class="card" id="createChallengeCard" style="display:none;">
       <h3 style="margin:0 0 14px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);">Challenge a player</h3>
@@ -1882,7 +1915,7 @@
         </div>
       </div>
       <label>Bio <span style="color:var(--muted);font-weight:400;">(shown on your player profile)</span></label>
-      <textarea id="bioInput" rows="3" maxlength="200" placeholder="Say something about yourself, your favorite games, playstyle…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:#E8EDF2;font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
+      <textarea id="bioInput" rows="3" maxlength="200" placeholder="Say something about yourself, your favorite games, playstyle…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
       <div id="bioCharCount" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:right;">0/200</div>
       <button class="ghost" id="saveProfileCustomizationBtn" style="margin-top:10px;">Save profile</button>
       <div class="msg" id="profileCustomizationMsg"></div>
@@ -2109,7 +2142,7 @@
       </div>
       <div id="ticketChatMessages" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:50vh;"></div>
       <div style="padding:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;">
-        <input type="text" id="ticketChatInput" placeholder="Type a reply…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:#E8EDF2;caret-color:#E8EDF2;-webkit-text-fill-color:#E8EDF2;font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
+        <input type="text" id="ticketChatInput" placeholder="Type a reply…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 12px;min-height:52px;color:var(--text);caret-color:var(--text);-webkit-text-fill-color:var(--text);font-size:15px;font-family:'Inter',sans-serif;box-sizing:border-box;">
         <button id="ticketChatSendBtn" class="primary" style="align-self:flex-end;padding:8px 18px;white-space:nowrap;">Send</button>
       </div>
     </div>
@@ -2141,12 +2174,12 @@
     </div>
 
     <h2 style="margin-top:32px;">Broadcast Announcement</h2>
-    <p class="subtitle">Posts a banner every visitor sees at the top of the Leaderboard page — signed in or not.</p>
+    <p class="subtitle">Posts a banner every visitor sees at the top of the Home page — signed in or not.</p>
     <div class="card">
       <label>Title</label>
       <input type="text" id="announcementTitleInput" placeholder="e.g. New tournament starts Friday!">
       <label>Message</label>
-      <textarea id="announcementMessageInput" rows="3" placeholder="Give the details players need to know." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:#E8EDF2;font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
+      <textarea id="announcementMessageInput" rows="3" placeholder="Give the details players need to know." style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
       <button class="primary" id="postAnnouncementBtn">Post announcement</button>
       <div class="msg" id="postAnnouncementMsg"></div>
     </div>
@@ -2413,7 +2446,7 @@
     <div class="auth-shell">
       <aside class="auth-brand">
         <div class="logo"><img class="logo-mark" src="/icon-192.png?v=2026-09-10" alt=""><span>VIGILEON <b>LEAGUE</b></span></div>
-        <h2>Your league starts <em>here.</em></h2>
+        <h2>Your league starts&nbsp;<em>here.</em></h2>
         <p>Join tournaments, challenge players one-on-one and climb the leaderboard.</p>
         <ul class="auth-points">
           <li><span class="pt-ico">🏆</span><span>Enter tournaments and follow live brackets</span></li>
@@ -2443,6 +2476,15 @@
             <input type="password" id="authPassword" placeholder="Enter your password" autocomplete="current-password">
             <button type="button" class="auth-eye" id="authEyeBtn" aria-label="Show password">Show</button>
           </div>
+          <div id="authConfirmWrap" style="display:none;">
+            <label for="authPasswordConfirm">Confirm password</label>
+            <div class="auth-field">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+              <input type="password" id="authPasswordConfirm" placeholder="Re-enter your password" autocomplete="new-password">
+              <button type="button" class="auth-eye" id="authEyeConfirmBtn" aria-label="Show password">Show</button>
+            </div>
+            <p class="auth-sub" style="margin-top:10px;margin-bottom:0;">After sign-up, set your gamertag in <b>My Matches</b> before joining paid play.</p>
+          </div>
           <div class="auth-row" id="authForgotRow"><a href="#" id="forgotPasswordLink">Forgot password?</a></div>
           <button class="primary auth-submit" id="authSubmitBtn">Sign in</button>
           <div class="msg" id="authMsg"></div>
@@ -2459,7 +2501,17 @@
 
 </main>
 
-<footer>VIGILEON LEAGUE — skill-based tournaments and 1v1 challenges across eFootball, Call of Duty &amp; more. <a href="#" onclick="showView('terms');return false;" style="color:var(--muted);text-decoration:underline;">Terms &amp; Privacy</a>. Built by Vigileon.</footer>
+<footer>
+  <nav class="foot-nav" aria-label="Footer">
+    <a href="#" onclick="showView('leaderboard');return false;">Home</a>
+    <a href="#" onclick="showView('tournaments');return false;">Tournaments</a>
+    <a href="#" onclick="showView('challenges');return false;">1v1 Challenges</a>
+    <a href="#" onclick="showView('rules');return false;">How It Works</a>
+    <a href="#" onclick="showView('terms');return false;">Terms &amp; Privacy</a>
+  </nav>
+  VIGILEON LEAGUE — skill-based tournaments and 1v1 challenges across eFootball, Call of Duty &amp; more.
+  <a href="#" onclick="showView('terms');return false;" style="color:var(--muted);text-decoration:underline;">Terms &amp; Privacy</a>. Built by Vigileon.
+</footer>
 
 <script>
 /* =====================================================================
@@ -2796,7 +2848,7 @@ document.getElementById('postAnnouncementBtn').addEventListener('click', async (
     });
     document.getElementById('announcementTitleInput').value = '';
     document.getElementById('announcementMessageInput').value = '';
-    msg.classList.add('show','ok'); msg.textContent = 'Posted — it will show on the Leaderboard page for everyone.';
+    msg.classList.add('show','ok'); msg.textContent = 'Posted — it will show on the Home page for everyone.';
     loadAnnouncementsAdmin();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = 'Could not post: ' + err.message;
@@ -3138,6 +3190,14 @@ let authMode = 'signin'; // or 'signup'
     b.textContent = showing ? 'Show' : 'Hide';
     b.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
   });
+  document.getElementById('authEyeConfirmBtn').addEventListener('click', ()=>{
+    const i = document.getElementById('authPasswordConfirm');
+    const showing = i.type === 'text';
+    i.type = showing ? 'password' : 'text';
+    const b = document.getElementById('authEyeConfirmBtn');
+    b.textContent = showing ? 'Show' : 'Hide';
+    b.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  });
 
   // Stop the page behind the login screen from scrolling, whichever way the screen closes.
   const gate = document.getElementById('lampGate');
@@ -3208,6 +3268,8 @@ const authBox = document.getElementById('authBox');
 /* ---------------- LOGIN SCREEN OPEN ---------------- */
 let lampAlreadyLit = false; // kept for older code paths; no longer used for the screen
 function showAuthCard(){
+  authMode = 'signin';
+  syncAuthModeUI();
   document.getElementById('lampGate').style.display = 'block';
   setTimeout(()=>{ const e=document.getElementById('authEmail'); if(e) e.focus(); }, 80);
 }
@@ -3237,15 +3299,23 @@ function renderAuthBox(){
   }
 }
 
+function syncAuthModeUI(){
+  const isIn = authMode === 'signin';
+  document.getElementById('authCardTitle').textContent = isIn ? 'Sign in' : 'Create account';
+  document.getElementById('authSubmitBtn').textContent = isIn ? 'Sign in' : 'Sign up';
+  document.getElementById('authToggleLink').textContent = isIn ? 'Create one' : 'Sign in';
+  document.getElementById('authSwitchText').textContent = isIn ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('authSub').textContent = isIn ? 'Welcome back. Enter your details to continue.' : 'Create an account to join tournaments and 1v1 challenges.';
+  document.getElementById('authForgotRow').style.visibility = isIn ? 'visible' : 'hidden';
+  document.getElementById('authConfirmWrap').style.display = isIn ? 'none' : 'block';
+  document.getElementById('authPassword').autocomplete = isIn ? 'current-password' : 'new-password';
+  if(isIn) document.getElementById('authPasswordConfirm').value = '';
+}
+
 document.getElementById('authToggleLink').addEventListener('click', (e)=>{
   e.preventDefault();
   authMode = authMode==='signin' ? 'signup' : 'signin';
-  document.getElementById('authCardTitle').textContent = authMode==='signin' ? 'Sign in' : 'Create account';
-  document.getElementById('authSubmitBtn').textContent = authMode==='signin' ? 'Sign in' : 'Sign up';
-  document.getElementById('authToggleLink').textContent = authMode==='signin' ? 'Create one' : 'Sign in';
-  document.getElementById('authSwitchText').textContent = authMode==='signin' ? "Don't have an account?" : 'Already have an account?';
-  document.getElementById('authSub').textContent = authMode==='signin' ? 'Welcome back. Enter your details to continue.' : 'Create an account to join tournaments and challenges.';
-  document.getElementById('authForgotRow').style.visibility = authMode==='signin' ? 'visible' : 'hidden';
+  syncAuthModeUI();
 });
 
 document.getElementById('forgotPasswordLink').addEventListener('click', async (e)=>{
@@ -3269,7 +3339,7 @@ document.getElementById('forgotPasswordLink').addEventListener('click', async (e
 /* Shows a spinner + "busy" text on a button while an async action runs, and locks the form so
    it can't be double-submitted. Used by email, Google and Apple sign-in. */
 function setAuthBusy(busy, label){
-  const ids = ['authSubmitBtn','googleSignInBtn','appleSignInBtn','authEmail','authPassword'];
+  const ids = ['authSubmitBtn','googleSignInBtn','appleSignInBtn','authEmail','authPassword','authPasswordConfirm'];
   ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = busy; });
   const btn = document.getElementById('authSubmitBtn');
   if(busy){
@@ -3289,6 +3359,15 @@ document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
   msg.className='msg'; msg.textContent='';
   if(!email || !pass){
     msg.classList.add('show','error'); msg.textContent='Enter an email and password.'; return;
+  }
+  if(authMode==='signup'){
+    const confirm = document.getElementById('authPasswordConfirm').value;
+    if(pass !== confirm){
+      msg.classList.add('show','error'); msg.textContent='Passwords do not match.'; return;
+    }
+    if(pass.length < 6){
+      msg.classList.add('show','error'); msg.textContent='Use at least 6 characters for your password.'; return;
+    }
   }
   setAuthBusy(true, authMode==='signin' ? 'Logging you in…' : 'Creating your account…');
   try{
@@ -8519,7 +8598,7 @@ async function renderTournamentAnnouncements(tournamentId){
     html += `<div class="card" style="margin-bottom:10px;">
       <label>Post news for this tournament</label>
       <input type="text" id="taTitle-${tournamentId}" placeholder="e.g. Bracket posted!" style="margin-bottom:8px;">
-      <textarea id="taMessage-${tournamentId}" rows="2" placeholder="Details players need to know…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;color:#E8EDF2;font-size:13.5px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;margin-bottom:8px;"></textarea>
+      <textarea id="taMessage-${tournamentId}" rows="2" placeholder="Details players need to know…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;color:var(--text);font-size:13.5px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;margin-bottom:8px;"></textarea>
       <button class="primary" style="width:auto;margin:0;padding:8px 16px;font-size:13px;" onclick="postTournamentAnnouncement('${tournamentId}')">Post</button>
       <div class="msg" id="taMsg-${tournamentId}"></div>
     </div>`;
@@ -9427,7 +9506,7 @@ async function pushNotification(toUid, {type, text, challengeId, dmOtherUid, dmO
   let loadingData = null, activeIdx = -1, debounce = null;
 
   const PAGE_KEYWORDS = {
-    leaderboard:'ranking rank top players points leaders',
+    leaderboard:'home community online hub players activity',
     rules:'how it works rules faq help guide',
     tournaments:'tournament join enter prize bracket',
     clans:'clan team squad guild',
@@ -9440,7 +9519,7 @@ async function pushNotification(toUid, {type, text, challengeId, dmOtherUid, dmO
     confirm:'confirm results opponent',
     terms:'terms privacy policy conditions'
   };
-  const PAGE_ICON = {leaderboard:'🏆',rules:'📘',tournaments:'🎮',clans:'🛡️',streams:'📺',challenges:'⚔️',wallet:'💰',report:'📝',profile:'📋',feedback:'💬',confirm:'✅',terms:'📄'};
+  const PAGE_ICON = {leaderboard:'🏠',rules:'📘',tournaments:'🎮',clans:'🛡️',streams:'📺',challenges:'⚔️',wallet:'💰',report:'📝',profile:'📋',feedback:'💬',confirm:'✅',terms:'📄'};
   const norm = t => (t||'').toString().toLowerCase();
   const esc = t => escapeHtml(String(t==null?'':t));
 
@@ -10718,7 +10797,7 @@ async function openInbox(){
     });
 
     if(threads.length === 0){
-      body.innerHTML = '<div class="empty-state">No messages yet. Search a player on the Leaderboard to start a conversation.</div>';
+      body.innerHTML = '<div class="empty-state">No messages yet. Search a player on the Home page to start a conversation.</div>';
       return;
     }
 

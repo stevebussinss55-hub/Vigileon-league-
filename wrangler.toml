@@ -1,0 +1,7 @@
+# Only needed if you deploy with Wrangler instead of pasting into the Cloudflare dashboard.
+name = "vigileon-cron"
+main = "vigileon-cron.js"
+compatibility_date = "2024-11-01"
+
+[triggers]
+crons = ["*/5 * * * *"]

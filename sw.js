@@ -1,10 +1,12 @@
-// This service worker does two jobs:
+// This service worker does three jobs:
 // 1. Exists at all — required for Chrome/Android to show the "Install app" prompt, and for
-//    the site to work as a PWA. It doesn't cache anything, so it never serves stale content.
-// 2. Shows push notifications (new match reports, payout requests, etc.) even when the app
-//    or the browser itself is fully closed. That part only ever matters for the admin account
-//    — the Cloud Function that triggers these only sends to whatever device the admin signed
-//    into and granted notification permission on.
+//    the site to work as a PWA.
+// 2. Keeps the app usable on weak/no data: the page and its images/icons are cached after the
+//    first visit. The page itself is NETWORK-FIRST (so a new deploy always wins when online;
+//    the cached copy is only used when offline or the network takes >5s). Data calls
+//    (/api/*, Firebase, Paystack) are never cached.
+// 3. Shows push notifications (match results, payout requests, etc.) even when the app or the
+//    browser itself is fully closed.
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
@@ -48,14 +50,66 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+const CACHE = 'vigileon-shell-v1';
+const PRECACHE = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/favicon-32.png'];
+
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((cache) => Promise.all(PRECACHE.map((u) => cache.add(u).catch(() => {}))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  self.clients.claim();
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
 
+function cacheCopy(request, response) {
+  if (response && response.status === 200 && response.type === 'basic') {
+    const copy = response.clone();
+    caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+  }
+  return response;
+}
+
 self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;                 // Firebase, fonts, Paystack: browser handles
+  if (url.pathname.startsWith('/api/')) return;                    // email/push functions: never cache
+  if (url.pathname === '/sw.js') return;                           // always fetch the newest worker
+  if (url.searchParams.has('_v')) return;                          // the in-app "new update" checker must hit the network
+
+  // The page itself: network first, cached copy only if offline or very slow.
+  if (req.mode === 'navigate') {
+    event.respondWith((async () => {
+      const network = fetch(req).then((res) => cacheCopy(new Request('/'), res));
+      const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 5000));
+      try {
+        const first = await Promise.race([network, timeout]);
+        if (first) return first;
+        const cached = await caches.match('/');
+        return cached || network;                                   // nothing cached yet: keep waiting
+      } catch (err) {
+        const cached = await caches.match('/');
+        if (cached) return cached;
+        throw err;
+      }
+    })());
+    return;
+  }
+
+  // Images, icons, manifest, etc.: show the cached copy instantly and refresh it in the background.
+  event.respondWith((async () => {
+    const cached = await caches.match(req);
+    const refresh = fetch(req).then((res) => cacheCopy(req, res)).catch(() => null);
+    if (cached) { event.waitUntil(refresh); return cached; }
+    return (await refresh) || Response.error();
+  })());
 });
