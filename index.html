@@ -120,7 +120,8 @@
   body.light-theme input[type=text],
   body.light-theme input[type=email],
   body.light-theme input[type=password],
-  body.light-theme select{
+  body.light-theme select,
+  body.light-theme textarea{
     color:#101418 !important;
     caret-color:#101418 !important;
     -webkit-text-fill-color:#101418 !important;
@@ -624,6 +625,16 @@
   .foot-nav a{color:var(--muted);text-decoration:none;font-size:12px;}
   .foot-nav a:hover{color:var(--cyan);text-decoration:underline;}
 
+  /* Modals / overlays — theme-safe fields + screen-reader isolation when closed */
+  .app-overlay input[type=text],
+  .app-overlay input[type=email],
+  .app-overlay input[type=password],
+  .app-overlay textarea{
+    color:var(--text) !important;
+    caret-color:var(--text) !important;
+    -webkit-text-fill-color:var(--text) !important;
+  }
+
   @media(max-width:640px){
     .podium{flex-direction:column;}
   }
@@ -812,6 +823,8 @@
   .banner-leaderboard{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(200,255,61,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(52,230,216,0.12), transparent 55%); }
   .banner-tournaments{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(52,230,216,0.18), transparent 55%), radial-gradient(circle at 85% 80%, rgba(255,215,0,0.10), transparent 55%); }
   .banner-challenges{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(255,92,92,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(255,140,0,0.12), transparent 55%); }
+  .banner-clans{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(179,136,255,0.18), transparent 55%), radial-gradient(circle at 85% 80%, rgba(200,255,61,0.10), transparent 55%); }
+  .banner-streams{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(255,92,92,0.14), transparent 55%), radial-gradient(circle at 85% 80%, rgba(77,163,255,0.14), transparent 55%); }
   .banner-rules{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(52,230,216,0.14), transparent 55%), radial-gradient(circle at 85% 80%, rgba(200,255,61,0.08), transparent 55%); }
   .banner-report{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(200,255,61,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(255,255,255,0.05), transparent 55%); }
   .banner-profile{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(180,140,255,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(52,230,216,0.08), transparent 55%); }
@@ -848,7 +861,7 @@
 <style>@keyframes splashspin{ to { transform: rotate(360deg); } }</style>
 <script>
   (function(){
-    var SPLASH_MIN_MS = 6000; // stays visible at least this long, even on a fast connection
+    var SPLASH_MIN_MS = 2500; // brief branded splash — long enough to read, not blocking
     var shownAt = Date.now();
     function hideSplash(){
       var el = document.getElementById('splashScreen');
@@ -857,6 +870,7 @@
       var wait = Math.max(0, SPLASH_MIN_MS - elapsed);
       setTimeout(function(){
         el.style.opacity = '0';
+        el.setAttribute('aria-busy','false');
         setTimeout(function(){ el.remove(); }, 500); // matches the CSS transition duration
       }, wait);
     }
@@ -927,7 +941,7 @@
 </aside>
 
 <!-- SITE SEARCH — one box that searches pages, help text, tournaments, players, clans and streams. -->
-<div id="searchOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1001;align-items:flex-start;justify-content:center;padding:max(14px, env(safe-area-inset-top)) 12px 12px;">
+<div id="searchOverlay" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1001;align-items:flex-start;justify-content:center;padding:max(14px, env(safe-area-inset-top)) 12px 12px;">
   <div style="width:min(620px,100%);max-height:calc(100vh - 28px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);">
       <span style="font-size:17px;">🔍</span>
@@ -939,7 +953,7 @@
 </div>
 
 <!-- 1v1 DIRECT MESSAGE (public user-to-user chat, opened from a leaderboard search) -->
-<div id="dmChatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="dmChatModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(480px, 100%);max-height:80vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <div>
@@ -966,7 +980,7 @@
 
 <!-- INBOX — every direct-message thread a user is part of, so they never have to search
      someone's name just to see what was sent to them. -->
-<div id="inboxModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="inboxModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(480px, 100%);max-height:80vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;">Inbox</b>
@@ -979,7 +993,7 @@
 <!-- DISPUTE SUBMISSION — required reason + counter-proof screenshot before a dispute can be
      filed, so the admin has two competing pieces of evidence to compare instead of a bare
      "disagree" click with nothing to go on. -->
-<div id="disputeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="disputeModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(480px, 100%);max-height:85vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;">Dispute this result</b>
@@ -1001,7 +1015,7 @@
 <!-- DISPUTE VIEWER (admin side) — shows the disputer's reason and counter-proof next to the
      original claim's screenshot, plus the full timeline and cool-off status, so both pieces
      of evidence and the process itself are visible at once. -->
-<div id="disputeViewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="disputeViewModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(560px, 100%);max-height:85vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;">Dispute details</b>
@@ -1014,7 +1028,7 @@
 <!-- DISPUTE RESPONSE (the original reporter's chance to answer a dispute filed against their
      claim, before the cool-off period starts). Optional — reporter can skip it, but the button
      stays available until an admin resolves the match. -->
-<div id="disputeResponseModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="disputeResponseModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(480px, 100%);max-height:85vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;">Respond to dispute</b>
@@ -1037,7 +1051,7 @@
 <!-- VIGILEON AI WIDGET (visible to everyone; admin-only actions are gated server-side) -->
 <div id="aiWidgetBtn" title="Vigileon AI" style="position:fixed;bottom:20px;right:20px;z-index:999;width:56px;height:56px;border-radius:50%;background:var(--lime);color:#0a0f0a;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:11px;">AI</div>
 
-<div id="aiPanel" style="display:none;flex-direction:column;position:fixed;bottom:86px;right:20px;z-index:999;width:min(480px, calc(100vw - 24px));max-height:75vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
+<div id="aiPanel" class="app-overlay" aria-hidden="true" inert style="display:none;flex-direction:column;position:fixed;bottom:86px;right:20px;z-index:999;width:min(480px, calc(100vw - 24px));max-height:75vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
   <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
     <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;">Vigileon AI</b>
     <div style="display:flex;align-items:center;gap:14px;">
@@ -1054,7 +1068,7 @@
 
 <!-- 1v1 CHALLENGE LIVE CHAT — only ever opened for an active challenge, and only the
      challenger + opponent (+ admin) can read/write it per the Firestore rules. -->
-<div id="challengeChatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="challengeChatModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(480px, 100%);max-height:80vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <div>
@@ -1079,7 +1093,7 @@
 <!-- TOURNAMENT LOBBY CHAT — a group chat for everyone entered in one tournament. Messages
      live in tournamentChats/{tournamentId}/messages; only players with a tournamentEntries
      doc for that tournament (+ admin) can read/write it per the Firestore rules. -->
-<div id="lobbyChatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="lobbyChatModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(480px, 100%);max-height:80vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <div>
@@ -1100,7 +1114,7 @@
      you sign in, active on every page, not just the challenge screen) shows this the
      instant someone calls you, with a ringtone + vibration, so you don't have to already
      be looking at the right screen to know someone's calling. -->
-<div id="incomingCallModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:16px;">
+<div id="incomingCallModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;align-items:center;width:min(360px, 100%);background:var(--panel);border:1px solid var(--lime);border-radius:18px;box-shadow:0 8px 40px rgba(200,255,61,0.25);padding:32px 20px;">
     <div style="position:relative;margin-bottom:16px;">
       <div class="incoming-call-ring"></div>
@@ -1126,7 +1140,7 @@
      for troubleshooting). Audio is peer-to-peer and never touches a server — nothing is
      recorded or stored. Firestore is only used as the signaling channel to set up the
      connection, not to carry any audio itself. -->
-<div id="voiceChatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:998;align-items:center;justify-content:center;padding:16px;">
+<div id="voiceChatModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;align-items:center;width:min(360px, 100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:28px 20px;">
     <div id="voiceChatAvatar" style="width:76px;height:76px;border-radius:50%;background:var(--panel-2);border:2px solid var(--lime);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:14px;">?</div>
     <div id="voiceChatOtherName" style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px;"></div>
@@ -1146,7 +1160,7 @@
 <!-- REPORT A PLAYER — sends details to the admin for review. Reporting does NOT block the
      player automatically; that's a separate action, since you might want to report something
      without cutting off contact (e.g. a dispute) or block without formally reporting. -->
-<div id="reportPlayerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;padding:16px;">
+<div id="reportPlayerModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;padding:16px;">
   <div style="display:flex;flex-direction:column;width:min(420px, 100%);max-height:85vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
       <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;">Report <span id="reportPlayerTargetName"></span></b>
@@ -1268,8 +1282,15 @@
 
   <!-- CLANS -->
   <section class="section" id="view-clans">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Clans</h2>
-    <p class="subtitle">Team up with other players. Every clan gets a combined win/loss record pulled from its members' confirmed matches.</p>
+    <div class="section-banner banner-clans">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">🛡️</div>
+        <div>
+          <h3 class="section-banner-title">Clans</h3>
+          <p class="section-banner-sub">Team up with other players. Every clan gets a combined win/loss record pulled from its members' confirmed matches.</p>
+        </div>
+      </div>
+    </div>
 
     <div id="clansLoggedOut" class="card" style="display:none;">
       <p style="color:var(--muted);font-size:14px;">Sign in to create or join a clan.</p>
@@ -1317,7 +1338,7 @@
     <span id="dismissIconNoticeBtn" style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:0 4px;">&times;</span>
   </div>
 
-  <div id="createClanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+  <div id="createClanModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
     <div style="display:flex;flex-direction:column;width:min(420px, 100%);max-height:88vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <b style="font-family:'Space Grotesk',sans-serif;font-size:15px;">Create a Clan</b>
@@ -1344,8 +1365,15 @@
 
   <!-- LIVE STREAMS -->
   <section class="section" id="view-streams">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>Live Streams</h2>
-    <p class="subtitle">Watch clan and tournament streams from Twitch and YouTube, or share your own.</p>
+    <div class="section-banner banner-streams">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">📺</div>
+        <div>
+          <h3 class="section-banner-title">Live Streams</h3>
+          <p class="section-banner-sub">Watch clan and tournament streams from Twitch and YouTube, or share your own.</p>
+        </div>
+      </div>
+    </div>
 
     <div id="myStreamWrap"></div>
 
@@ -1360,7 +1388,7 @@
   </section>
 
   <!-- ADD/EDIT STREAM MODAL -->
-  <div id="streamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+  <div id="streamModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
     <div style="display:flex;flex-direction:column;width:min(420px, 100%);max-height:88vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <b style="font-family:'Space Grotesk',sans-serif;font-size:15px;">Share Your Stream</b>
@@ -1397,8 +1425,15 @@
 
   <!-- RULES / HOW IT WORKS -->
   <section class="section" id="view-rules">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--cyan);"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>How Vigileon League Works</h2>
-    <p class="subtitle">Read this before you join a tournament.</p>
+    <div class="section-banner banner-rules">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">📘</div>
+        <div>
+          <h3 class="section-banner-title">How Vigileon League Works</h3>
+          <p class="section-banner-sub">Read this before you join a tournament or stake a 1v1 challenge.</p>
+        </div>
+      </div>
+    </div>
 
     <div class="card howcard">
       <h3>Tournament matches (points)</h3>
@@ -1516,7 +1551,7 @@
 
     <div class="card howcard">
       <h3>Contact</h3>
-      <p style="color:var(--muted);font-size:13.5px;line-height:1.7;margin:0;">For disputes, refund requests, data deletion requests, or anything else, contact the admin at <a href="mailto:tweneboahgideon55@gmail.com" style="color:var(--cyan);">tweneboahgideon55@gmail.com</a> or through the Feedback page in the app.</p>
+      <p style="color:var(--muted);font-size:13.5px;line-height:1.7;margin:0;">For disputes, refund requests, data deletion requests, or anything else, email <a href="mailto:support@vigileongh.com" style="color:var(--cyan);">support@vigileongh.com</a>, use the in-app <b>Feedback</b> page, or open a <b>Support ticket</b> for a two-way conversation.</p>
     </div>
   </section>
 
@@ -1742,7 +1777,7 @@
 
   <!-- PAYMENT METHOD CHOICE — offered wherever a fee can be paid either from wallet balance
        or via a fresh Paystack checkout. -->
-  <div id="paymentChoiceModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;padding:16px;">
+  <div id="paymentChoiceModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;padding:16px;">
     <div style="display:flex;flex-direction:column;width:min(380px, 100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
       <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
         <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;" id="paymentChoiceTitle">How would you like to pay?</b>
@@ -2089,8 +2124,15 @@
 
   <!-- FEEDBACK -->
   <section class="section" id="view-feedback">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><path d="M4 5h16v11H8l-4 4V5z"/></svg>Feedback &amp; Support</h2>
-    <p class="subtitle">Found a bug, or have an idea to make Vigileon League better? Let the admin know directly.</p>
+    <div class="section-banner banner-feedback">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">💬</div>
+        <div>
+          <h3 class="section-banner-title">Feedback &amp; Support</h3>
+          <p class="section-banner-sub">Report bugs, share ideas, or email <a href="mailto:support@vigileongh.com" style="color:var(--cyan);">support@vigileongh.com</a> for account and payment help.</p>
+        </div>
+      </div>
+    </div>
     <div class="card" id="feedbackLoggedOut" style="display:none;">
       <p style="color:var(--muted);font-size:14px;">Sign in to send feedback.</p>
     </div>
@@ -2128,7 +2170,7 @@
   <!-- SUPPORT TICKET CONVERSATION — shared by both the player's own ticket list and the
        admin's ticket queue; which side is viewing is tracked separately so the right "you"
        styling and reply permissions apply. -->
-  <div id="ticketChatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
+  <div id="ticketChatModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:998;align-items:center;justify-content:center;padding:16px;">
     <div style="display:flex;flex-direction:column;width:min(480px, 100%);max-height:82vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;">
       <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
         <div>
@@ -2434,7 +2476,7 @@
   </section>
 
   <!-- SCREENSHOT PREVIEW MODAL -->
-  <div id="imageModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:999;align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:12px;" onclick="closeImageModal()">
+  <div id="imageModal" class="app-overlay" aria-hidden="true" inert style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:999;align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:12px;" onclick="closeImageModal()">
     <img id="imageModalImg" style="max-width:100%;max-height:80vh;border-radius:10px;">
     <a id="imageModalVideoLink" href="#" target="_blank" rel="noopener" onclick="event.stopPropagation();" style="display:none;color:var(--lime);background:var(--panel);padding:10px 18px;border-radius:8px;text-decoration:none;font-size:13.5px;border:1px solid var(--line);">▶ View video evidence</a>
     <button class="smallbtn" style="position:absolute;top:20px;right:20px;" onclick="closeImageModal()">Close</button>
@@ -2442,7 +2484,7 @@
 
   <!-- LOGIN / SIGN-UP SCREEN. Opened by "Sign in" (header or menu). Closed by the ✕, Esc, or any
        navigation. Same element IDs as before, so all the sign-in logic keeps working. -->
-  <div id="lampGate" class="auth-screen" style="display:none;">
+  <div id="lampGate" class="auth-screen app-overlay" aria-hidden="true" inert style="display:none;">
     <div class="auth-shell">
       <aside class="auth-brand">
         <div class="logo"><img class="logo-mark" src="/icon-192.png?v=2026-09-10" alt=""><span>VIGILEON <b>LEAGUE</b></span></div>
@@ -2483,7 +2525,14 @@
               <input type="password" id="authPasswordConfirm" placeholder="Re-enter your password" autocomplete="new-password">
               <button type="button" class="auth-eye" id="authEyeConfirmBtn" aria-label="Show password">Show</button>
             </div>
-            <p class="auth-sub" style="margin-top:10px;margin-bottom:0;">After sign-up, set your gamertag in <b>My Matches</b> before joining paid play.</p>
+            <p class="auth-sub" style="margin-top:10px;margin-bottom:0;">Must match the name you use in-game (min. 3 characters).</p>
+          </div>
+          <div id="authGamertagWrap" style="display:none;">
+            <label for="authGamertag">Gamertag (in-game name)</label>
+            <div class="auth-field">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" id="authGamertag" placeholder="e.g. TWENE_GIDEON" maxlength="24" autocomplete="username">
+            </div>
           </div>
           <div class="auth-row" id="authForgotRow"><a href="#" id="forgotPasswordLink">Forgot password?</a></div>
           <button class="primary auth-submit" id="authSubmitBtn">Sign in</button>
@@ -2530,6 +2579,8 @@ const firebaseConfig = {
   databaseURL: "https://vigileon-league-default-rtdb.firebaseio.com"
 };
 
+// Public support address shown to players (Terms, Feedback). Admin Firebase access still uses ADMIN_EMAIL seed.
+const SUPPORT_EMAIL = "support@vigileongh.com";
 // Set this to the email address that should have admin (approve/reject) powers.
 const ADMIN_EMAIL = "tweneboahgideon55@gmail.com";
 
@@ -3164,6 +3215,21 @@ let currentUser = null;
 let isAdmin = false;
 let authMode = 'signin'; // or 'signup'
 
+function isOverlayOpen(el){
+  const d = el.style.display;
+  return !!d && d !== 'none';
+}
+function syncOverlayA11y(el, open){
+  if(!el) return;
+  if(open){
+    el.setAttribute('aria-hidden','false');
+    el.removeAttribute('inert');
+  } else {
+    el.setAttribute('aria-hidden','true');
+    el.setAttribute('inert','');
+  }
+}
+
 /* ---------------- SIDE MENU + LOGIN SCREEN CONTROLS ---------------- */
 (function(){
   const menu = document.getElementById('sideMenu');
@@ -3203,10 +3269,21 @@ let authMode = 'signin'; // or 'signup'
   const gate = document.getElementById('lampGate');
   new MutationObserver(()=>{
     document.body.classList.toggle('auth-open', gate.style.display === 'block');
+    syncOverlayA11y(gate, gate.style.display === 'block');
   }).observe(gate, { attributes:true, attributeFilter:['style'] });
+
+  document.querySelectorAll('.app-overlay').forEach(el=>{
+    if(el === gate) return;
+    syncOverlayA11y(el, isOverlayOpen(el));
+    new MutationObserver(()=> syncOverlayA11y(el, isOverlayOpen(el))).observe(el, {attributes:true, attributeFilter:['style']});
+  });
 })();
 
-function closeAuthScreen(){ document.getElementById('lampGate').style.display = 'none'; }
+function closeAuthScreen(){
+  const gate = document.getElementById('lampGate');
+  gate.style.display = 'none';
+  syncOverlayA11y(gate, false);
+}
 
 /* ---------------- NAV ---------------- */
 const views = ['leaderboard','rules','tournaments','challenges','report','confirm','profile','feedback','admin','playerprofile','terms','clans','clanprofile','streams','wallet','notifications'];
@@ -3224,7 +3301,7 @@ function showView(view){
   document.querySelectorAll('#nav button').forEach(b=>{
     b.classList.toggle('active', b.dataset.view===view);
   });
-  document.getElementById('lampGate').style.display='none';
+  closeAuthScreen();
   if(view==='clans'){
     loadClansPage();
   }
@@ -3270,7 +3347,9 @@ let lampAlreadyLit = false; // kept for older code paths; no longer used for the
 function showAuthCard(){
   authMode = 'signin';
   syncAuthModeUI();
-  document.getElementById('lampGate').style.display = 'block';
+  const gate = document.getElementById('lampGate');
+  gate.style.display = 'block';
+  syncOverlayA11y(gate, true);
   setTimeout(()=>{ const e=document.getElementById('authEmail'); if(e) e.focus(); }, 80);
 }
 function resetLampState(){}
@@ -3308,8 +3387,12 @@ function syncAuthModeUI(){
   document.getElementById('authSub').textContent = isIn ? 'Welcome back. Enter your details to continue.' : 'Create an account to join tournaments and 1v1 challenges.';
   document.getElementById('authForgotRow').style.visibility = isIn ? 'visible' : 'hidden';
   document.getElementById('authConfirmWrap').style.display = isIn ? 'none' : 'block';
+  document.getElementById('authGamertagWrap').style.display = isIn ? 'none' : 'block';
   document.getElementById('authPassword').autocomplete = isIn ? 'current-password' : 'new-password';
-  if(isIn) document.getElementById('authPasswordConfirm').value = '';
+  if(isIn){
+    document.getElementById('authPasswordConfirm').value = '';
+    document.getElementById('authGamertag').value = '';
+  }
 }
 
 document.getElementById('authToggleLink').addEventListener('click', (e)=>{
@@ -3339,7 +3422,7 @@ document.getElementById('forgotPasswordLink').addEventListener('click', async (e
 /* Shows a spinner + "busy" text on a button while an async action runs, and locks the form so
    it can't be double-submitted. Used by email, Google and Apple sign-in. */
 function setAuthBusy(busy, label){
-  const ids = ['authSubmitBtn','googleSignInBtn','appleSignInBtn','authEmail','authPassword','authPasswordConfirm'];
+  const ids = ['authSubmitBtn','googleSignInBtn','appleSignInBtn','authEmail','authPassword','authPasswordConfirm','authGamertag'];
   ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = busy; });
   const btn = document.getElementById('authSubmitBtn');
   if(busy){
@@ -3368,15 +3451,27 @@ document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
     if(pass.length < 6){
       msg.classList.add('show','error'); msg.textContent='Use at least 6 characters for your password.'; return;
     }
+    const tag = document.getElementById('authGamertag').value.trim();
+    if(tag.length < 3){
+      msg.classList.add('show','error'); msg.textContent='Enter your in-game gamertag (at least 3 characters).'; return;
+    }
   }
   setAuthBusy(true, authMode==='signin' ? 'Logging you in…' : 'Creating your account…');
   try{
     if(authMode==='signin'){
       await auth.signInWithEmailAndPassword(email, pass);
     } else {
+      const tag = document.getElementById('authGamertag').value.trim();
+      const tagLower = tag.toLowerCase();
+      const dupSnap = await db.collection('users').where('gamertagLower','==', tagLower).limit(1).get();
+      if(!dupSnap.empty){
+        msg.classList.add('show','error'); msg.textContent='That gamertag is already taken — choose another.'; return;
+      }
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const newUserDoc = {
-        email: email, gamertag: '', wins:0, losses:0, score:0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        email: email, gamertag: tag, gamertagLower: tagLower,
+        gamertagUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        wins:0, losses:0, score:0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       const referrerUid = getPendingReferrer();
       if(referrerUid && referrerUid !== cred.user.uid){
@@ -3387,7 +3482,7 @@ document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
       clearPendingReferrer();
       if(referrerUid) triggerReferralProcessing();
     }
-    document.getElementById('lampGate').style.display='none';
+    closeAuthScreen();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = friendlyAuthError(err);
   }finally{
@@ -3420,7 +3515,7 @@ async function loginWithGoogle(msg){
     const provider = new firebase.auth.GoogleAuthProvider();
     const cred = await auth.signInWithPopup(provider);
     await saveSocialSignInProfile(cred);
-    document.getElementById('lampGate').style.display='none';
+    closeAuthScreen();
   }catch(err){
     if(err.code === 'auth/popup-closed-by-user') return; // they just changed their mind — not an error
     if(msg){ msg.classList.add('show','error'); msg.textContent = friendlyAuthError(err); }
@@ -3449,7 +3544,7 @@ async function loginWithApple(msg){
     provider.addScope('name');
     const cred = await auth.signInWithPopup(provider);
     await saveSocialSignInProfile(cred);
-    document.getElementById('lampGate').style.display='none';
+    closeAuthScreen();
   }catch(err){
     if(err.code === 'auth/popup-closed-by-user') return; // they just changed their mind — not an error
     if(msg){ msg.classList.add('show','error'); msg.textContent = friendlyAuthError(err); }
@@ -7364,7 +7459,7 @@ function drawCardChrome(ctx, kicker){
 
   ctx.fillStyle = '#8A93A6';
   ctx.font = "500 26px 'Inter', sans-serif";
-  ctx.fillText('league.vigileongh.com  •  Free multi-game leaderboard', CARD_SIZE/2, CARD_SIZE-70);
+  ctx.fillText('league.vigileongh.com  •  Tournaments & 1v1 challenges', CARD_SIZE/2, CARD_SIZE-70);
 }
 
 async function ensureCardFontsLoaded(){
@@ -7674,12 +7769,13 @@ async function shareMatchWin(game, opponent, scoreline){
 function shareInvite(){
   const siteUrl = window.location.origin + window.location.pathname;
   let text, link;
+  const pitch = '🎮 Join Vigileon League — paid tournaments, 1v1 cash challenges, and clans across eFootball, Call of Duty & more. Payments via Paystack · Mobile Money payouts in Ghana.';
   if(currentUser){
     link = siteUrl + '?ref=' + currentUser.uid;
-    text = `🎮 Join Vigileon League — a free skill-based leaderboard across eFootball, Call of Duty & more games. Report your wins, climb the ranks, join paid tournaments with real prizes.\n\nSign up with my link and we both get a bonus once you report your first match:\n${link}`;
+    text = pitch + '\n\nSign up with my link and we both get a bonus once you report your first match:\n' + link;
   } else {
     link = siteUrl;
-    text = `🎮 Join Vigileon League — a free skill-based leaderboard across eFootball, Call of Duty & more games. Report your wins, climb the ranks, join paid tournaments with real prizes.\n\n${link}`;
+    text = pitch + '\n\n' + link;
   }
   const url = 'https://wa.me/?text=' + encodeURIComponent(text);
   window.open(url, '_blank');
