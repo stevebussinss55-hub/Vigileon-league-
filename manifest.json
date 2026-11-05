@@ -1,7 +1,7 @@
 {
   "name": "Vigileon League",
   "short_name": "Vigileon League",
-  "description": "eFootball, Call of Duty, and more game tournaments, 1v1 challenges, and leaderboards.",
+  "description": "eFootball, Call of Duty, and more — paid tournaments, 1v1 cash challenges, and clans.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
