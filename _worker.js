@@ -1,5 +1,5 @@
 // _worker.js — single-file Cloudflare Pages worker (replaces the functions/ folder).
-// Routes: POST /api/send-push, /api/send-email, /api/process-referral, /api/paystack-transfer.
+// Routes: POST /api/send-push, /api/send-email, /api/process-referral, /api/paystack-transfer, /api/wallet-adjust.
 // Secrets: RESEND_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON, PAYSTACK_SECRET_KEY. Everything else serves the static site.
 // Secrets needed: RESEND_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON.
 
@@ -358,6 +358,13 @@ async function addDoc(base, token, collectionPath, obj) {
   return gfetch(`${base}/${collectionPath}`, token, { method: 'POST', body: JSON.stringify({ fields: toFields(obj) }) });
 }
 
+async function createDocWithId(base, token, collectionPath, docId, obj) {
+  return gfetch(`${base}/${collectionPath}?documentId=${encodeURIComponent(docId)}`, token, {
+    method: 'POST',
+    body: JSON.stringify({ fields: toFields(obj) })
+  });
+}
+
 // Atomic server-side increment of one numeric field; returns the new value.
 async function incrementField(sa, base, token, docPath, field, amount) {
   const docName = `projects/${sa.project_id}/databases/(default)/documents/${docPath}`;
@@ -631,6 +638,100 @@ async function handlePaystackTransfer({ request, env }) {
   }
 }
 
+/* ======================================================================================
+   POST /api/wallet-adjust
+   Server-side wallet balance changes for signed-in players. Stops clients from writing
+   walletBalance directly in Firestore. Top-ups require a Paystack reference verified live.
+   ====================================================================================== */
+const WALLET_TYPE_RULES = {
+  topup: { mustBePositive: true, needsReference: true },
+  tournament_entry: { mustBePositive: false },
+  challenge_stake: { mustBePositive: false },
+  refund: { mustBePositive: true }
+};
+
+async function handleWalletAdjust({ request, env }) {
+  if (request.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405);
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return jsonRes({ error: 'Wallet service is not configured yet.' }, 500);
+
+  let payload;
+  try { payload = await request.json(); } catch (e) { return jsonRes({ error: 'Invalid JSON body.' }, 400); }
+  const { idToken, amountGHS, type, note, reference } = payload || {};
+  if (!idToken || type == null || amountGHS == null) return jsonRes({ error: 'idToken, type, and amountGHS are required.' }, 400);
+  const rules = WALLET_TYPE_RULES[type];
+  if (!rules) return jsonRes({ error: 'Unknown wallet transaction type.' }, 400);
+
+  const amountAbs = Math.round(Number(amountGHS) * 100) / 100;
+  if (!amountAbs || isNaN(amountAbs) || amountAbs <= 0) return jsonRes({ error: 'Invalid amount.' }, 400);
+  const signedAmount = rules.mustBePositive ? amountAbs : -amountAbs;
+
+  try {
+    const sa = parseServiceAccount(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    let claims;
+    try { claims = await verifyIdToken(idToken, sa.project_id); }
+    catch (e) { return jsonRes({ error: 'Invalid or expired session — sign in again.' }, 401); }
+    const uid = claims.sub;
+    const token = await getAccessToken(sa);
+    const base = firestoreBase(sa);
+    const userPath = `users/${encodeURIComponent(uid)}`;
+
+    if (rules.needsReference) {
+      const ref = String(reference || '').trim();
+      if (!ref) return jsonRes({ error: 'Paystack reference is required for top-ups.' }, 400);
+      const lockPath = `walletTopupLocks/${encodeURIComponent(ref.replace(/\//g, '_'))}`;
+      const existingLock = await getDocObj(base, token, lockPath);
+      if (existingLock) {
+        const balDoc = await getDocObj(base, token, userPath);
+        const bal = (balDoc && balDoc.data.walletBalance) || 0;
+        return jsonRes({ success: true, alreadyProcessed: true, balance: bal });
+      }
+      const PAYSTACK_SECRET_KEY = env.PAYSTACK_SECRET_KEY;
+      if (!PAYSTACK_SECRET_KEY) return jsonRes({ error: 'Paystack is not configured for wallet top-ups.' }, 500);
+      const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(ref)}`, {
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` }
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok || !verifyData.status || verifyData.data.status !== 'success') {
+        return jsonRes({ error: 'Paystack could not verify that payment: ' + (verifyData.message || 'unknown error') }, 400);
+      }
+      const paidGHS = verifyData.data.amount / 100;
+      if (Math.abs(paidGHS - amountAbs) > 0.01) {
+        return jsonRes({ error: 'Paid amount does not match the top-up amount.' }, 400);
+      }
+      const lockCreate = await createDocWithId(base, token, 'walletTopupLocks', ref.replace(/\//g, '_'), {
+        uid, amountGHS: amountAbs, reference: ref, createdAt: new Date()
+      });
+      if (!lockCreate.ok && lockCreate.status !== 409) {
+        return jsonRes({ error: 'Could not record top-up (duplicate or conflict).' }, 409);
+      }
+      if (!lockCreate.ok) {
+        const balDoc = await getDocObj(base, token, userPath);
+        return jsonRes({ success: true, alreadyProcessed: true, balance: (balDoc && balDoc.data.walletBalance) || 0 });
+      }
+    }
+
+    const userDoc = await getDocObj(base, token, userPath);
+    const current = (userDoc && userDoc.data.walletBalance) || 0;
+    const next = Math.round((current + signedAmount) * 100) / 100;
+    if (next < 0) return jsonRes({ error: 'Insufficient wallet balance.' }, 400);
+
+    await incrementField(sa, base, token, userPath, 'walletBalance', signedAmount);
+    await addDoc(base, token, 'walletTransactions', {
+      uid,
+      userEmail: claims.email || '',
+      type,
+      amountGHS: signedAmount,
+      note: note || '',
+      reference: reference || null,
+      createdAt: new Date()
+    });
+    return jsonRes({ success: true, balance: next });
+  } catch (err) {
+    console.error('wallet-adjust error:', err);
+    return jsonRes({ error: err.message }, 500);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
@@ -638,6 +739,7 @@ export default {
     if (pathname === '/api/send-email') return handleSendEmail({ request, env });
     if (pathname === '/api/process-referral') return handleProcessReferral({ request, env });
     if (pathname === '/api/paystack-transfer') return handlePaystackTransfer({ request, env });
+    if (pathname === '/api/wallet-adjust') return handleWalletAdjust({ request, env });
     return env.ASSETS.fetch(request); // everything else = normal static site files
   }
 };

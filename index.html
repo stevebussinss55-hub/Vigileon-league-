@@ -613,6 +613,22 @@
     margin:28px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);
   }
   .profile-edit-card h3{margin:0 0 4px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);}
+  .active-dashboard-card{
+    margin-bottom:22px;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    border-left:3px solid var(--lime);
+  }
+  .active-dashboard-card h3{margin:0 0 4px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--lime);}
+  .active-dash-item{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;
+    border-top:1px solid var(--line);cursor:pointer;
+  }
+  .active-dash-item:first-of-type{border-top:none;padding-top:4px;}
+  .active-dash-item:active{opacity:0.85;}
+  .admin-inbox-chip{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 10px;border-radius:20px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
+  }
+  .admin-inbox-chip.has-items{border-color:var(--lime);color:var(--lime);}
   .profile-stat{
     background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center;
   }
@@ -1253,6 +1269,13 @@
     <!-- BROADCAST ANNOUNCEMENT — shows the latest active one the admin has posted. Dismissing
          it is remembered per-announcement (by ID) in localStorage, so dismissing one doesn't
          hide a future new announcement. -->
+    <div id="activeDashboardCard" class="active-dashboard-card" style="display:none;">
+      <h3>⚡ Active for you</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 8px;line-height:1.5;">Challenges, confirmations, and disputes that need action — tap to jump there.</p>
+      <div id="activeDashboardList"></div>
+      <div class="empty-state" id="activeDashboardEmpty" style="display:none;padding:16px 0;">You're all caught up — browse tournaments or send a challenge.</div>
+    </div>
+
     <div id="announcementBanner" style="display:none;margin-bottom:18px;padding:14px 16px;background:rgba(200,255,61,0.08);border:1px solid var(--lime);border-radius:10px;position:relative;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
         <div>
@@ -2291,6 +2314,15 @@
 
   <!-- ADMIN -->
   <section class="section" id="view-admin">
+    <h2 id="adminSectionInbox"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><path d="M22 12h-6l-2 3H10l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>Moderation Inbox</h2>
+    <p class="subtitle">Everything waiting on you — matches, payouts, verification, tickets, and reports in one list.</p>
+    <div class="card" style="margin-bottom:28px;">
+      <div id="adminInboxSummary" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;"></div>
+      <div id="adminInboxList"></div>
+      <div class="empty-state" id="adminInboxEmpty" style="display:none;">All caught up — nothing in the inbox.</div>
+      <div class="empty-state" id="adminInboxLoading">Loading inbox…</div>
+    </div>
+
     <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Flyer Generator</h2>
     <p class="subtitle">Every flyer always explains the platform (tournaments, 1v1 challenges, eFootball & Call of Duty) automatically — the headline and hook below are just the hook/caption on top, and include a scannable QR code straight to the site for TikTok, Instagram, YouTube, WhatsApp status, anywhere a link alone won't cut it.</p>
     <div class="card">
@@ -2352,7 +2384,7 @@
       <div class="msg" id="thresholdMsg"></div>
     </div>
 
-    <h2 style="margin-top:32px;">Identity Verification Queue</h2>
+    <h2 id="adminSectionVerification" style="margin-top:32px;">Identity Verification Queue</h2>
     <p class="subtitle">Compare the ID photo and the selfie — same person, same document, photo looks unedited.</p>
     <div id="verificationAdminList"></div>
     <div class="empty-state" id="verificationAdminEmpty" style="display:none;">No pending verification requests.</div>
@@ -2411,7 +2443,7 @@
       <div class="empty-state" id="revenueTrendLoading" style="display:none;">Loading…</div>
     </div>
 
-    <h2 style="margin-top:32px;">Player Feedback<span id="feedbackAdminBadge" class="nav-badge" style="display:none;"></span></h2>
+    <h2 id="adminSectionFeedback" style="margin-top:32px;">Player Feedback<span id="feedbackAdminBadge" class="nav-badge" style="display:none;"></span></h2>
     <p class="subtitle">Bug reports and suggestions sent in by players.</p>
     <div style="margin-bottom:12px;">
       <button class="ghost" id="clearAllFeedbackBtn" style="color:var(--danger);border-color:var(--danger);">🗑 Clear all feedback</button>
@@ -2422,7 +2454,7 @@
       <div class="empty-state" id="feedbackAdminEmpty" style="display:none;">No feedback yet.</div>
     </div>
 
-    <h2 style="margin-top:32px;">Support Tickets<span id="ticketsAdminBadge" class="nav-badge" style="display:none;"></span></h2>
+    <h2 id="adminSectionTickets" style="margin-top:32px;">Support Tickets<span id="ticketsAdminBadge" class="nav-badge" style="display:none;"></span></h2>
     <p class="subtitle">Open tickets first. Tap one to read and reply.</p>
     <div id="ticketsAdminList"></div>
     <div class="empty-state" id="ticketsAdminEmpty" style="display:none;">No support tickets yet.</div>
@@ -2449,7 +2481,7 @@
       <div class="empty-state" id="revenueEmpty" style="display:none;">No tournament entries yet.</div>
     </div>
 
-    <h2 style="margin-top:32px;">Pending Review — Ranked &amp; Open Tournaments</h2>
+    <h2 id="adminSectionMatches" style="margin-top:32px;">Pending Review — Ranked &amp; Open Tournaments</h2>
     <p class="subtitle">Confirm or reject submitted results. Confirming updates the leaderboard.</p>
     <div class="card">
       <input type="text" placeholder="🔍 Search by player, game, opponent…" oninput="filterTableRows(this,'adminBody')" style="margin-bottom:12px;">
@@ -2495,7 +2527,7 @@
       <div class="empty-state" id="reviewedEmpty" style="display:none;">No reviewed matches yet.</div>
     </div>
 
-    <h2 style="margin-top:32px;font-size:17px;">Payout Requests</h2>
+    <h2 id="adminSectionWithdrawals" style="margin-top:32px;font-size:17px;">Payout Requests</h2>
     <p class="subtitle">Send the money via Mobile Money yourself, then mark it paid here to keep a record.</p>
     <div class="card">
       <input type="text" placeholder="🔍 Search by player, tournament, number…" oninput="filterTableRows(this,'withdrawalsBody')" style="margin-bottom:12px;">
@@ -2507,7 +2539,7 @@
       <div class="empty-state" id="withdrawalsEmpty" style="display:none;">No payout requests yet.</div>
     </div>
 
-    <h2 style="margin-top:32px;font-size:17px;">1v1 Challenge Payout Requests</h2>
+    <h2 id="adminSectionChallengePayouts" style="margin-top:32px;font-size:17px;">1v1 Challenge Payout Requests</h2>
     <p class="subtitle">Send the pot to the winner via Mobile Money yourself, then mark it paid here.</p>
     <div class="card">
       <input type="text" placeholder="🔍 Search by winner, opponent, number…" oninput="filterTableRows(this,'challengeWithdrawalsBody')" style="margin-bottom:12px;">
@@ -2530,7 +2562,7 @@
       <div class="empty-state" id="challengeRefundsEmpty" style="display:none;">No refunds owed right now.</div>
     </div>
 
-    <h2 style="margin-top:32px;font-size:17px;">Player Reports<span id="reportsAdminBadge" class="nav-badge" style="display:none;"></span></h2>
+    <h2 id="adminSectionReports" style="margin-top:32px;font-size:17px;">Player Reports<span id="reportsAdminBadge" class="nav-badge" style="display:none;"></span></h2>
     <p class="subtitle">Reports players have submitted about other players.</p>
     <div class="card">
       <div id="reportsAdminList"></div>
@@ -3118,27 +3150,26 @@ async function getWalletBalance(){
   return (doc.exists && doc.data().walletBalance) || 0;
 }
 
-// Adds (or subtracts, with a negative amount) GHS to the current user's wallet inside a
-// transaction so two near-simultaneous spends can't race each other into an incorrect balance,
-// and logs the change. Throws if a debit would take the balance below zero.
+// Adds (or subtracts, with a negative amount) GHS via the server-side wallet API so balance
+// cannot be inflated from the browser. Throws if a debit would take the balance below zero.
 async function adjustWalletBalance(amountGHS, type, note, reference){
-  const userRef = db.collection('users').doc(currentUser.uid);
-  await db.runTransaction(async (t)=>{
-    const doc = await t.get(userRef);
-    const current = (doc.exists && doc.data().walletBalance) || 0;
-    const next = Math.round((current + amountGHS) * 100) / 100;
-    if(next < 0) throw new Error('Insufficient wallet balance.');
-    t.set(userRef, {walletBalance: next}, {merge:true});
+  if(!currentUser) throw new Error('Sign in first.');
+  const idToken = await currentUser.getIdToken();
+  const res = await fetch('/api/wallet-adjust', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      idToken,
+      amountGHS: Math.abs(amountGHS),
+      type,
+      note: note || '',
+      reference: reference || null
+    })
   });
-  await db.collection('walletTransactions').add({
-    uid: currentUser.uid,
-    userEmail: currentUser.email,
-    type: type, // 'topup' | 'tournament_entry' | 'challenge_stake' | 'refund' | 'admin_adjustment'
-    amountGHS: amountGHS,
-    note: note || '',
-    reference: reference || null,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  let data = {};
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error((data && data.error) || 'Wallet update failed.');
+  return data.balance;
 }
 
 async function loadWalletPage(){
@@ -3408,6 +3439,9 @@ function showView(view){
   if(view==='streams'){
     loadStreamsPage();
   }
+  if(view==='leaderboard'){
+    loadActiveDashboard();
+  }
   if(view==='profile'){
     loadProfilePage();
   }
@@ -3424,6 +3458,7 @@ function showView(view){
     return;
   }
   if(view==='admin' && isAdmin){
+    loadAdminInbox();
     loadAdminQueue();
     loadReviewedMatches();
     loadWithdrawalsAdmin();
@@ -3713,12 +3748,54 @@ function getPendingReferrer(){
 function clearPendingReferrer(){
   try{ localStorage.removeItem('vigileon_ref'); }catch(e){}
 }
-(function captureReferralOnLoad(){
+(function captureDeepLinksOnLoad(){
   try{
     const ref = new URLSearchParams(window.location.search).get('ref');
     if(ref) localStorage.setItem('vigileon_ref', ref);
+    const player = new URLSearchParams(window.location.search).get('player');
+    if(player) window.__pendingPlayerProfileUid = player;
   }catch(e){}
 })();
+
+function maybeOpenPendingPlayerProfile(){
+  const uid = window.__pendingPlayerProfileUid;
+  if(!uid || !db) return;
+  window.__pendingPlayerProfileUid = null;
+  openPlayerProfile(uid);
+}
+
+function adminScrollTo(sectionId){
+  showView('admin');
+  setTimeout(()=>{
+    const el = document.getElementById(sectionId);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 100);
+}
+
+function getMyPublicProfileUrl(){
+  if(!currentUser) return window.location.origin + window.location.pathname;
+  const u = new URL(window.location.href);
+  u.searchParams.set('player', currentUser.uid);
+  return u.origin + u.pathname + '?' + u.searchParams.toString();
+}
+
+async function copyMyProfileLink(){
+  if(!currentUser){ alert('Sign in to copy your profile link.'); return; }
+  const url = getMyPublicProfileUrl();
+  try{
+    await navigator.clipboard.writeText(url);
+    alert('Profile link copied — share it anywhere.');
+  }catch(e){
+    prompt('Copy your profile link:', url);
+  }
+}
+
+function shareMyProfileWhatsApp(){
+  if(!currentUser) return;
+  const url = getMyPublicProfileUrl();
+  const text = 'Check out my player profile on Vigileon League:\n' + url;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
 
 function friendlyAuthError(err){
   const map = {
@@ -3837,6 +3914,7 @@ if(isConfigured){
         refreshProfileHero();
         refreshProfileWalletStrip();
         loadMyProfileBadges();
+        loadActiveDashboard();
         checkAndAwardBadges();
         loadWithdrawalTournamentOptions();
         loadMyWithdrawals();
@@ -3854,10 +3932,12 @@ if(isConfigured){
         startNotificationListener();
         startIncomingCallListener();
         setupPushNotifications(); // registers this device for push — works for any signed-in player, not just admin
-        if(isAdmin){ loadAdminQueue(); loadReviewedMatches(); loadWithdrawalsAdmin(); loadRevenueSummary(); loadFeedbackAdmin(); loadAnalytics(); loadRevenueTrend(); loadChallengeWithdrawalsAdmin(); loadChallengeRefundsAdmin(); loadAllChallengesAdmin(); loadAdminList(); loadReportsAdmin(); loadAnnouncementsAdmin(); }
+        if(isAdmin){ loadAdminInbox(); loadAdminQueue(); loadReviewedMatches(); loadWithdrawalsAdmin(); loadRevenueSummary(); loadFeedbackAdmin(); loadAnalytics(); loadRevenueTrend(); loadChallengeWithdrawalsAdmin(); loadChallengeRefundsAdmin(); loadAllChallengesAdmin(); loadAdminList(); loadReportsAdmin(); loadAnnouncementsAdmin(); }
       }
       loadTournaments();
       loadChallenges();
+      maybeOpenPendingPlayerProfile();
+      if(document.getElementById('view-leaderboard').classList.contains('active')) loadActiveDashboard();
       if(document.getElementById('view-clans').classList.contains('active')) loadClansPage();
       if(document.getElementById('view-streams').classList.contains('active')) loadStreamsPage();
     }catch(err){
@@ -4677,6 +4757,202 @@ async function loadConfirmations(){
     `;
     list.appendChild(card);
   });
+  loadActiveDashboard();
+}
+
+/* ---------------- HOME: ACTIVE DASHBOARD ---------------- */
+async function loadActiveDashboard(){
+  const card = document.getElementById('activeDashboardCard');
+  const list = document.getElementById('activeDashboardList');
+  const empty = document.getElementById('activeDashboardEmpty');
+  if(!card || !list) return;
+  if(!currentUser){
+    card.style.display = 'none';
+    return;
+  }
+  try{
+    const [confirmSnap, asChallengerSnap, asOpponentSnap, reportedSnap] = await Promise.all([
+      db.collection('matches').where('opponentUserId','==',currentUser.uid).where('opponentConfirmed','==','pending').get(),
+      db.collection('challenges').where('challengerId','==',currentUser.uid).get(),
+      db.collection('challenges').where('opponentId','==',currentUser.uid).get(),
+      db.collection('matches').where('userId','==',currentUser.uid).get()
+    ]);
+
+    const items = [];
+
+    confirmSnap.forEach(doc=>{
+      const m = doc.data();
+      items.push({
+        sort: 1,
+        title: 'Confirm a reported result',
+        sub: (m.userEmail || 'Opponent') + ' · ' + (m.game || 'Match'),
+        action: ()=> showView('confirm')
+      });
+    });
+
+    const allChallenges = [];
+    asChallengerSnap.forEach(d=> allChallenges.push({id: d.id, data: d.data()}));
+    asOpponentSnap.forEach(d=> allChallenges.push({id: d.id, data: d.data()}));
+
+    allChallenges.filter(({data:c})=> c.opponentId === currentUser.uid && c.status === 'awaiting_opponent_response').forEach(({data:c})=>{
+      items.push({
+        sort: 0,
+        title: 'Challenge invite — respond',
+        sub: (c.challengerGamertag || 'Player') + ' · ' + c.game + ' · GHS ' + c.stakeGHS,
+        action: ()=> showView('challenges')
+      });
+    });
+
+    allChallenges.filter(({data:c})=> c.status === 'active').forEach(({id, data:c})=>{
+      const amChallenger = c.challengerId === currentUser.uid;
+      const other = amChallenger ? c.opponentGamertag : c.challengerGamertag;
+      items.push({
+        sort: 2,
+        title: 'Active 1v1 — report result',
+        sub: 'vs ' + other + ' · ' + c.game,
+        action: ()=>{ showView('report'); goReportChallenge(id); }
+      });
+    });
+
+    reportedSnap.forEach(doc=>{
+      const m = doc.data();
+      if(m.opponentConfirmed === false && m.disputeStatus === 'open' && !m.claimantRespondedAt){
+        items.push({
+          sort: 0,
+          title: 'Dispute needs your response',
+          sub: 'vs ' + (m.opponent || 'opponent') + ' · ' + (m.game || ''),
+          action: ()=> openDisputeResponseModal(doc.id)
+        });
+      }
+    });
+
+    items.sort((a,b)=> a.sort - b.sort);
+
+    if(items.length === 0){
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      card.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    card.style.display = 'block';
+    list.innerHTML = items.map((it, idx)=> `
+      <div class="active-dash-item" role="button" tabindex="0" data-active-idx="${idx}">
+        <div>
+          <div style="font-size:14px;font-weight:600;font-family:'Space Grotesk',sans-serif;">${escapeHtml(it.title)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">${escapeHtml(it.sub)}</div>
+        </div>
+        <span style="color:var(--cyan);font-size:18px;line-height:1;">›</span>
+      </div>
+    `).join('');
+    list.querySelectorAll('.active-dash-item').forEach((el, idx)=>{
+      const run = ()=> items[idx].action();
+      el.onclick = run;
+      el.onkeydown = (e)=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); run(); } };
+    });
+  }catch(err){
+    console.log('Active dashboard failed (non-blocking):', err);
+    card.style.display = 'none';
+  }
+}
+
+/* ---------------- ADMIN MODERATION INBOX ---------------- */
+async function loadAdminInbox(){
+  if(!isAdmin) return;
+  const list = document.getElementById('adminInboxList');
+  const empty = document.getElementById('adminInboxEmpty');
+  const loading = document.getElementById('adminInboxLoading');
+  const summary = document.getElementById('adminInboxSummary');
+  if(!list) return;
+  loading.style.display = 'block';
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  try{
+    const [pendingMatches, verSnap, feedbackSnap, reportsSnap, ticketsSnap, wdSnap, chWdSnap] = await Promise.all([
+      db.collection('matches').where('status','==','pending').limit(25).get(),
+      db.collection('verificationRequests').where('status','==','pending').limit(15).get(),
+      db.collection('feedback').limit(40).get(),
+      db.collection('reports').limit(40).get(),
+      db.collection('supportTickets').get(),
+      db.collection('withdrawalRequests').where('status','in',['pending','processing']).limit(15).get(),
+      db.collection('challengePayoutRequests').where('status','in',['pending','processing']).limit(15).get()
+    ]);
+
+    const items = [];
+    pendingMatches.forEach(doc=>{
+      const m = doc.data();
+      items.push({ pri: 2, title: 'Review match result', sub: (m.userEmail||'?') + ' vs ' + (m.opponent||'?') + ' · ' + (m.game||''), section: 'adminSectionMatches' });
+    });
+    verSnap.forEach(doc=>{
+      const v = doc.data();
+      items.push({ pri: 1, title: 'Verify player identity', sub: v.gamertag || v.email || 'Player', section: 'adminSectionVerification' });
+    });
+    feedbackSnap.forEach(doc=>{
+      const f = doc.data();
+      if(f.status === 'read') return;
+      items.push({ pri: 4, title: 'Unread feedback', sub: (f.userEmail||'?') + ': ' + (f.message||'').slice(0,80), section: 'adminSectionFeedback' });
+    });
+    reportsSnap.forEach(doc=>{
+      const r = doc.data();
+      if(r.status === 'reviewed') return;
+      items.push({ pri: 3, title: 'Player report', sub: (r.reportedName||'?') + ' — ' + (r.reason||'').slice(0,70), section: 'adminSectionReports' });
+    });
+    ticketsSnap.forEach(doc=>{
+      const t = doc.data();
+      if(t.status !== 'open' || t.lastMessageBy !== 'player') return;
+      items.push({ pri: 1, title: 'Support ticket waiting', sub: (t.gamertag||'?') + ': ' + (t.subject||''), section: 'adminSectionTickets' });
+    });
+    wdSnap.forEach(doc=>{
+      const w = doc.data();
+      items.push({ pri: 2, title: 'Tournament payout', sub: (w.gamertag||'?') + ' · ' + (w.tournamentName||''), section: 'adminSectionWithdrawals' });
+    });
+    chWdSnap.forEach(doc=>{
+      const w = doc.data();
+      items.push({ pri: 2, title: 'Challenge payout', sub: (w.gamertag||'?') + ' · GHS ' + (w.amountGHS||0), section: 'adminSectionChallengePayouts' });
+    });
+
+    items.sort((a,b)=> a.pri - b.pri);
+    loading.style.display = 'none';
+
+    const counts = {
+      matches: pendingMatches.size,
+      verify: verSnap.size,
+      feedback: items.filter(i=> i.title === 'Unread feedback').length,
+      reports: items.filter(i=> i.title === 'Player report').length,
+      tickets: items.filter(i=> i.title === 'Support ticket waiting').length,
+      payouts: wdSnap.size + chWdSnap.size
+    };
+    summary.innerHTML = [
+      ['Matches', counts.matches, 'adminSectionMatches'],
+      ['Verify', counts.verify, 'adminSectionVerification'],
+      ['Feedback', counts.feedback, 'adminSectionFeedback'],
+      ['Reports', counts.reports, 'adminSectionReports'],
+      ['Tickets', counts.tickets, 'adminSectionTickets'],
+      ['Payouts', counts.payouts, 'adminSectionWithdrawals']
+    ].map(([label, n, sec])=> `<button type="button" class="admin-inbox-chip${n>0?' has-items':''}" onclick="adminScrollTo('${sec}')">${label}: ${n}</button>`).join('');
+
+    if(items.length === 0){
+      empty.style.display = 'block';
+      return;
+    }
+    const show = items.slice(0, 12);
+    list.innerHTML = show.map(it=> `
+      <div class="active-dash-item" role="button" tabindex="0" onclick="adminScrollTo('${it.section}')">
+        <div>
+          <div style="font-size:14px;font-weight:600;">${escapeHtml(it.title)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">${escapeHtml(it.sub)}</div>
+        </div>
+        <span style="color:var(--muted);font-size:12px;">Jump ↓</span>
+      </div>
+    `).join('');
+    if(items.length > show.length){
+      list.innerHTML += `<div style="font-size:12px;color:var(--muted);padding-top:10px;">+ ${items.length - show.length} more — use the chips above to open each queue.</div>`;
+    }
+  }catch(err){
+    loading.style.display = 'none';
+    list.innerHTML = '<div class="empty-state">Could not load inbox: ' + escapeHtml(err.message||String(err)) + '</div>';
+  }
 }
 
 async function confirmMatchResult(matchId, agree){
@@ -4964,6 +5240,10 @@ async function refreshProfileHero(){
         <div><div class="n">${d.wins||0}-${d.losses||0}</div><div class="l">Record</div></div>
         <div><div class="n">${pct}%</div><div class="l">Win rate</div></div>
         <div><div class="n">${d.currentStreak||0}</div><div class="l">Streak</div></div>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+        <button class="ghost" type="button" onclick="copyMyProfileLink()" style="width:auto;margin:0;font-size:12.5px;padding:8px 14px;">Copy profile link</button>
+        <button class="ghost" type="button" onclick="shareMyProfileWhatsApp()" style="width:auto;margin:0;font-size:12.5px;padding:8px 14px;">Share on WhatsApp</button>
       </div>`;
   }catch(err){
     console.log('Could not refresh profile hero:', err);
@@ -9756,6 +10036,7 @@ async function loadChallenges(){
   loadMyChallengeWithdrawals();
   renderH2HLeaderboard();
   loadPastSeasons();
+  loadActiveDashboard();
 }
 
 /* ---------------- NOTIFICATIONS (shared by challenge chat + public DMs) ----------------
