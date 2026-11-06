@@ -900,6 +900,17 @@
   .banner-report{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(200,255,61,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(255,255,255,0.05), transparent 55%); }
   .banner-profile{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(180,140,255,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(52,230,216,0.08), transparent 55%); }
   .banner-feedback{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(52,230,216,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(200,255,61,0.08), transparent 55%); }
+  .banner-wallet{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(200,255,61,0.18), transparent 55%), radial-gradient(circle at 85% 80%, rgba(52,230,216,0.10), transparent 55%); }
+  .banner-notifications{ --banner-gradient: radial-gradient(circle at 15% 20%, rgba(77,163,255,0.16), transparent 55%), radial-gradient(circle at 85% 80%, rgba(180,140,255,0.10), transparent 55%); }
+  .onboarding-step{
+    display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line);
+  }
+  .onboarding-step:first-child{border-top:none;}
+  .onboarding-check{
+    width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px;
+  }
+  .onboarding-check.done{border-color:var(--lime);background:rgba(200,255,61,0.15);color:var(--lime);}
 
   /* Subtle lift-on-hover for cards site-wide — makes the whole app feel more alive without
      any new assets. */
@@ -1269,6 +1280,15 @@
     <!-- BROADCAST ANNOUNCEMENT — shows the latest active one the admin has posted. Dismissing
          it is remembered per-announcement (by ID) in localStorage, so dismissing one doesn't
          hide a future new announcement. -->
+    <div id="onboardingCard" class="active-dashboard-card" style="display:none;border-left-color:var(--cyan);">
+      <h3 style="color:var(--cyan);">Welcome — quick setup</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.5;">Three steps and you’re ready to compete for real prizes.</p>
+      <div id="onboardingSteps"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button class="ghost" type="button" id="onboardingDismissBtn" style="width:auto;margin:0;font-size:12px;">Skip for now</button>
+      </div>
+    </div>
+
     <div id="activeDashboardCard" class="active-dashboard-card" style="display:none;">
       <h3>⚡ Active for you</h3>
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 8px;line-height:1.5;">Challenges, confirmations, and disputes that need action — tap to jump there.</p>
@@ -1814,8 +1834,15 @@
 
   <!-- WALLET -->
   <section class="section" id="view-wallet">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--lime);"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M17 15h.01"/></svg>Wallet</h2>
-    <p class="subtitle">Top up once, then spend from your balance to join tournaments or send 1v1 challenges — no repeat Paystack checkouts, no failed-transaction headaches.</p>
+    <div class="section-banner banner-wallet">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">💰</div>
+        <div>
+          <h3 class="section-banner-title">Wallet</h3>
+          <p class="section-banner-sub">Top up with Paystack once, then pay tournament entries and 1v1 stakes from your balance — faster checkouts, fewer failed payments.</p>
+        </div>
+      </div>
+    </div>
 
     <div class="card" id="walletLoggedOut" style="display:none;">
       <p style="color:var(--muted);font-size:14px;">Sign in to use your wallet.</p>
@@ -1847,8 +1874,15 @@
   <!-- NOTIFICATIONS (full history — the bell dropdown only shows unread; this shows everything,
        read or not, so it's a real "center" rather than a disappearing-once-read popup). -->
   <section class="section" id="view-notifications">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--cyan);"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications</h2>
-    <p class="subtitle">Everything that's happened to your account — challenge invites, match reviews, disputes, payouts, and more. This stays here even if a push notification never arrived.</p>
+    <div class="section-banner banner-notifications">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">🔔</div>
+        <div>
+          <h3 class="section-banner-title">Notifications</h3>
+          <p class="section-banner-sub">Challenge invites, match reviews, disputes, payouts, and messages — everything stays here even if a push never arrived.</p>
+        </div>
+      </div>
+    </div>
     <div id="notifPageList"></div>
     <div class="empty-state" id="notifPageEmpty" style="display:none;">No notifications yet.</div>
   </section>
@@ -2927,6 +2961,7 @@ async function loadReportsAdmin(){
     loading.style.display = 'none';
     list.innerHTML = `<div class="empty-state">Could not load reports: ${escapeHtml(err.message||String(err))}</div>`;
   }
+  refreshAdminInbox();
 }
 
 async function markReportReviewed(id){
@@ -3441,6 +3476,7 @@ function showView(view){
   }
   if(view==='leaderboard'){
     loadActiveDashboard();
+    loadOnboardingCard();
   }
   if(view==='profile'){
     loadProfilePage();
@@ -3797,6 +3833,14 @@ function shareMyProfileWhatsApp(){
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
 }
 
+const ONBOARDING_SKIP_KEY = 'vigileon_onboarding_skip_v1';
+
+document.getElementById('onboardingDismissBtn').addEventListener('click', ()=>{
+  try{ localStorage.setItem(ONBOARDING_SKIP_KEY, '1'); }catch(e){}
+  const card = document.getElementById('onboardingCard');
+  if(card) card.style.display = 'none';
+});
+
 function friendlyAuthError(err){
   const map = {
     'auth/email-already-in-use':'That email already has an account — try signing in instead.',
@@ -3915,6 +3959,7 @@ if(isConfigured){
         refreshProfileWalletStrip();
         loadMyProfileBadges();
         loadActiveDashboard();
+        loadOnboardingCard();
         checkAndAwardBadges();
         loadWithdrawalTournamentOptions();
         loadMyWithdrawals();
@@ -4415,6 +4460,7 @@ async function uploadAvatarPhoto(file){
     loadLeaderboard();
     checkAndAwardBadges();
     refreshProfileHero();
+    loadOnboardingCard();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = 'Could not upload photo: ' + (err.message||err);
   }
@@ -4587,6 +4633,7 @@ document.getElementById('saveProfileCustomizationBtn').addEventListener('click',
     loadLeaderboard();
     checkAndAwardBadges();
     refreshProfileHero();
+    loadOnboardingCard();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = 'Could not save: ' + (err.message||err);
   }
@@ -4674,6 +4721,7 @@ document.getElementById('saveGamertagBtn').addEventListener('click', async ()=>{
   loadGamertag();
   loadLeaderboard();
   refreshProfileHero();
+  loadOnboardingCard();
 });
 
 document.getElementById('backfillGamertagBtn').addEventListener('click', async ()=>{
@@ -4856,7 +4904,6 @@ async function loadActiveDashboard(){
   }
 }
 
-/* ---------------- ADMIN MODERATION INBOX ---------------- */
 async function loadAdminInbox(){
   if(!isAdmin) return;
   const list = document.getElementById('adminInboxList');
@@ -4952,6 +4999,64 @@ async function loadAdminInbox(){
   }catch(err){
     loading.style.display = 'none';
     list.innerHTML = '<div class="empty-state">Could not load inbox: ' + escapeHtml(err.message||String(err)) + '</div>';
+  }
+}
+
+function refreshAdminInbox(){
+  if(isAdmin) loadAdminInbox();
+}
+
+/* ---------------- ONBOARDING CHECKLIST (first-time setup) ---------------- */
+async function loadOnboardingCard(){
+  const card = document.getElementById('onboardingCard');
+  const stepsEl = document.getElementById('onboardingSteps');
+  if(!card || !stepsEl) return;
+  if(!currentUser){
+    card.style.display = 'none';
+    return;
+  }
+  try{
+    if(localStorage.getItem(ONBOARDING_SKIP_KEY) === '1'){
+      card.style.display = 'none';
+      return;
+    }
+    const [userDoc, entriesSnap, challA, challB] = await Promise.all([
+      db.collection('users').doc(currentUser.uid).get(),
+      db.collection('tournamentEntries').where('userId','==',currentUser.uid).limit(1).get(),
+      db.collection('challenges').where('challengerId','==',currentUser.uid).limit(1).get(),
+      db.collection('challenges').where('opponentId','==',currentUser.uid).limit(1).get()
+    ]);
+    const d = userDoc.exists ? userDoc.data() : {};
+    const hasGamertag = !!(d.gamertag && String(d.gamertag).trim().length >= 3);
+    const hasPhoto = !!d.photoURL;
+    const hasPlay = !entriesSnap.empty || !challA.empty || !challB.empty;
+    const steps = [
+      { done: hasGamertag, label: 'Set your gamertag', hint: 'So opponents know who you are in-game.', go: ()=> showView('profile') },
+      { done: hasPhoto, label: 'Add a profile photo', hint: 'Shown on your public profile and leaderboards.', go: ()=> showView('profile') },
+      { done: hasPlay, label: 'Join a tournament or send a 1v1', hint: 'Pick one way to start competing.', go: ()=> showView('tournaments') }
+    ];
+    if(steps.every(s=> s.done)){
+      card.style.display = 'none';
+      try{ localStorage.removeItem(ONBOARDING_SKIP_KEY); }catch(e){}
+      return;
+    }
+    card.style.display = 'block';
+    stepsEl.innerHTML = steps.map((s, i)=> `
+      <div class="onboarding-step">
+        <div class="onboarding-check${s.done ? ' done' : ''}">${s.done ? '✓' : i + 1}</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:600;">${escapeHtml(s.label)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(s.hint)}</div>
+          ${s.done ? '' : `<button class="ghost" type="button" style="width:auto;margin:8px 0 0;padding:6px 12px;font-size:12px;" data-onboard-step="${i}">Do this</button>`}
+        </div>
+      </div>
+    `).join('');
+    stepsEl.querySelectorAll('[data-onboard-step]').forEach(btn=>{
+      btn.onclick = ()=> steps[Number(btn.getAttribute('data-onboard-step'))].go();
+    });
+  }catch(err){
+    console.log('Onboarding card failed (non-blocking):', err);
+    card.style.display = 'none';
   }
 }
 
@@ -5653,6 +5758,7 @@ async function loadFeedbackAdmin(){
       </div>
     </div>`;
   });
+  refreshAdminInbox();
 }
 
 /* ================= SUPPORT TICKETS =================
@@ -6055,6 +6161,7 @@ async function loadWithdrawalsAdmin(){
       </td>
     </tr>`;
   });
+  refreshAdminInbox();
 }
 
 async function markWithdrawalPaid(id){
@@ -6114,6 +6221,7 @@ async function payoutViaPaystack(collectionName, requestId, challengeId, buttonE
     }
     if(collectionName === 'withdrawalRequests') loadWithdrawalsAdmin();
     else loadChallengeWithdrawalsAdmin();
+    refreshAdminInbox();
   }catch(err){
     alert('Payout failed: ' + err.message);
   }finally{
@@ -6582,6 +6690,7 @@ async function loadAdminQueue(){
       </td>
     </tr>`;
   });
+  refreshAdminInbox();
 }
 
 function formatOpponentConfirmStatus(status, matchId){
@@ -9098,6 +9207,7 @@ async function confirmTournamentEntry(tournamentId, reference, feeGHS, isTestEnt
       sendPushNotification({ target: 'admin', title: 'New tournament entry', body: gamertag + ' joined "' + tName + '"', url: '/#tournaments' });
     }
     loadTournaments();
+    loadOnboardingCard();
   }catch(err){
     if(isTestEntry){
       alert('Could not create the test entry: ' + err.message);
@@ -9855,6 +9965,7 @@ async function confirmChallengeAcceptance(challengeId, reference){
     });
     alert('Stake paid — challenge is on! Play your match, then report the result with a screenshot.');
     loadChallenges();
+    loadOnboardingCard();
   }catch(err){
     alert('Your payment went through (reference: ' + reference + ') but we could not activate the challenge. Contact the admin with this reference so they can add it manually.');
   }
@@ -10037,6 +10148,7 @@ async function loadChallenges(){
   renderH2HLeaderboard();
   loadPastSeasons();
   loadActiveDashboard();
+  loadOnboardingCard();
 }
 
 /* ---------------- NOTIFICATIONS (shared by challenge chat + public DMs) ----------------
@@ -11539,6 +11651,7 @@ async function loadChallengeWithdrawalsAdmin(){
         <button class="ghost" onclick="markChallengeWithdrawalPaid('${id}','${w.challengeId}')">Mark paid manually</button>` : '—'}</td>
     </tr>`;
   });
+  refreshAdminInbox();
 }
 
 async function markChallengeWithdrawalPaid(requestId, challengeId){
@@ -11855,6 +11968,7 @@ async function loadVerificationAdminQueue(){
   }catch(err){
     list.innerHTML = '<div class="empty-state">Could not load verification requests: ' + escapeHtml(err.message||String(err)) + '</div>';
   }
+  refreshAdminInbox();
 }
 
 async function approveVerification(requestId, uid){
