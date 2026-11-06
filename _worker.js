@@ -650,6 +650,19 @@ const WALLET_TYPE_RULES = {
   refund: { mustBePositive: true }
 };
 
+async function ensureUserDoc(base, token, userPath, email) {
+  const existing = await getDocObj(base, token, userPath);
+  if (existing) return;
+  const r = await patchDoc(base, token, userPath, {
+    walletBalance: 0,
+    wins: 0,
+    losses: 0,
+    score: 0,
+    email: email || ''
+  });
+  if (!r.ok) throw new Error('Could not initialize user profile for wallet: ' + JSON.stringify(r.data));
+}
+
 async function handleWalletAdjust({ request, env }) {
   if (request.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405);
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return jsonRes({ error: 'Wallet service is not configured yet.' }, 500);
@@ -663,7 +676,7 @@ async function handleWalletAdjust({ request, env }) {
 
   const amountAbs = Math.round(Number(amountGHS) * 100) / 100;
   if (!amountAbs || isNaN(amountAbs) || amountAbs <= 0) return jsonRes({ error: 'Invalid amount.' }, 400);
-  const signedAmount = rules.mustBePositive ? amountAbs : -amountAbs;
+  let signedAmount = rules.mustBePositive ? amountAbs : -amountAbs;
 
   try {
     const sa = parseServiceAccount(env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -674,49 +687,74 @@ async function handleWalletAdjust({ request, env }) {
     const token = await getAccessToken(sa);
     const base = firestoreBase(sa);
     const userPath = `users/${encodeURIComponent(uid)}`;
+    let creditAmount = amountAbs;
 
     if (rules.needsReference) {
       const ref = String(reference || '').trim();
       if (!ref) return jsonRes({ error: 'Paystack reference is required for top-ups.' }, 400);
-      const lockPath = `walletTopupLocks/${encodeURIComponent(ref.replace(/\//g, '_'))}`;
-      const existingLock = await getDocObj(base, token, lockPath);
-      if (existingLock) {
-        const balDoc = await getDocObj(base, token, userPath);
-        const bal = (balDoc && balDoc.data.walletBalance) || 0;
-        return jsonRes({ success: true, alreadyProcessed: true, balance: bal });
-      }
+      const lockId = ref.replace(/\//g, '_');
+      const lockPath = `walletTopupLocks/${encodeURIComponent(lockId)}`;
+
       const PAYSTACK_SECRET_KEY = env.PAYSTACK_SECRET_KEY;
-      if (!PAYSTACK_SECRET_KEY) return jsonRes({ error: 'Paystack is not configured for wallet top-ups.' }, 500);
+      if (!PAYSTACK_SECRET_KEY) return jsonRes({ error: 'Paystack is not configured for wallet top-ups (PAYSTACK_SECRET_KEY missing on the server).' }, 500);
+
       const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(ref)}`, {
         headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` }
       });
       const verifyData = await verifyRes.json();
-      if (!verifyRes.ok || !verifyData.status || verifyData.data.status !== 'success') {
-        return jsonRes({ error: 'Paystack could not verify that payment: ' + (verifyData.message || 'unknown error') }, 400);
+      if (!verifyRes.ok || !verifyData.status) {
+        return jsonRes({ error: 'Paystack verify request failed: ' + (verifyData.message || 'unknown error') }, 502);
       }
-      const paidGHS = verifyData.data.amount / 100;
-      if (Math.abs(paidGHS - amountAbs) > 0.01) {
-        return jsonRes({ error: 'Paid amount does not match the top-up amount.' }, 400);
+      const payStatus = verifyData.data && verifyData.data.status;
+      if (payStatus !== 'success') {
+        return jsonRes({ error: 'Paystack payment is not successful yet (status: ' + (payStatus || 'unknown') + '). Wait a few seconds and tap Retry credit.' }, 400);
       }
-      const lockCreate = await createDocWithId(base, token, 'walletTopupLocks', ref.replace(/\//g, '_'), {
-        uid, amountGHS: amountAbs, reference: ref, createdAt: new Date()
-      });
-      if (!lockCreate.ok && lockCreate.status !== 409) {
-        return jsonRes({ error: 'Could not record top-up (duplicate or conflict).' }, 409);
-      }
-      if (!lockCreate.ok) {
+      creditAmount = Math.round((verifyData.data.amount / 100) * 100) / 100;
+      if (creditAmount <= 0) return jsonRes({ error: 'Paystack returned an invalid paid amount.' }, 400);
+
+      let lock = await getDocObj(base, token, lockPath);
+      if (lock && lock.data.credited === true) {
         const balDoc = await getDocObj(base, token, userPath);
         return jsonRes({ success: true, alreadyProcessed: true, balance: (balDoc && balDoc.data.walletBalance) || 0 });
       }
+      // Old bug: lock existed without crediting — allow repair if not marked credited
+      if (lock && lock.data.credited !== true && lock.data.amountGHS) {
+        creditAmount = Number(lock.data.amountGHS) || creditAmount;
+      }
+
+      if (!lock) {
+        const lockCreate = await createDocWithId(base, token, 'walletTopupLocks', lockId, {
+          uid, reference: ref, credited: false, amountGHS: creditAmount, createdAt: new Date()
+        });
+        if (!lockCreate.ok && !isConflict(lockCreate)) {
+          return jsonRes({ error: 'Could not start top-up processing: ' + JSON.stringify(lockCreate.data) }, 500);
+        }
+        if (!lockCreate.ok) lock = await getDocObj(base, token, lockPath);
+      }
+      if (lock && lock.data.credited === true) {
+        const balDoc = await getDocObj(base, token, userPath);
+        return jsonRes({ success: true, alreadyProcessed: true, balance: (balDoc && balDoc.data.walletBalance) || 0 });
+      }
+
+      signedAmount = creditAmount;
     }
+
+    await ensureUserDoc(base, token, userPath, claims.email || '');
 
     const userDoc = await getDocObj(base, token, userPath);
     const current = (userDoc && userDoc.data.walletBalance) || 0;
     const next = Math.round((current + signedAmount) * 100) / 100;
     if (next < 0) return jsonRes({ error: 'Insufficient wallet balance.' }, 400);
 
-    await incrementField(sa, base, token, userPath, 'walletBalance', signedAmount);
-    await addDoc(base, token, 'walletTransactions', {
+    let newBalance;
+    try {
+      newBalance = await incrementField(sa, base, token, userPath, 'walletBalance', signedAmount);
+    } catch (incErr) {
+      console.error('wallet-adjust increment failed:', incErr);
+      return jsonRes({ error: 'Could not update wallet balance in the database. ' + incErr.message }, 500);
+    }
+
+    const txLog = await addDoc(base, token, 'walletTransactions', {
       uid,
       userEmail: claims.email || '',
       type,
@@ -725,7 +763,17 @@ async function handleWalletAdjust({ request, env }) {
       reference: reference || null,
       createdAt: new Date()
     });
-    return jsonRes({ success: true, balance: next });
+    if (!txLog.ok) {
+      console.error('wallet-adjust tx log failed (balance was still updated):', txLog.data);
+    }
+
+    if (rules.needsReference && reference) {
+      const lockId = String(reference).trim().replace(/\//g, '_');
+      const lockPath = `walletTopupLocks/${encodeURIComponent(lockId)}`;
+      await patchDoc(base, token, lockPath, { credited: true, amountGHS: signedAmount, completedAt: new Date() }).catch(() => null);
+    }
+
+    return jsonRes({ success: true, balance: newBalance != null ? newBalance : next });
   } catch (err) {
     console.error('wallet-adjust error:', err);
     return jsonRes({ error: err.message }, 500);

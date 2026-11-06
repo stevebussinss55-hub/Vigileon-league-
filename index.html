@@ -1858,9 +1858,16 @@
         <h3 style="margin:0 0 12px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);">Top up</h3>
         <label>Amount (GHS)</label>
         <input type="text" id="walletTopUpAmount" placeholder="e.g. 50" inputmode="decimal">
-        <button class="primary" id="walletTopUpBtn">Top up via Paystack</button>
-        <div class="msg" id="walletTopUpMsg"></div>
+      <button class="primary" id="walletTopUpBtn">Top up via Paystack</button>
+      <div class="msg" id="walletTopUpMsg"></div>
+      <div id="walletRetryWrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);">
+        <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.5;">Already paid? Paste the Paystack reference below and tap retry — you will <b>not</b> be charged again; we verify the payment and add it to your wallet.</p>
+        <label>Paystack reference</label>
+        <input type="text" id="walletRetryRef" placeholder="e.g. VGL-WALLET-1793939740155" autocomplete="off">
+        <button class="ghost" type="button" id="walletRetryBtn" style="margin-top:8px;">Retry credit to wallet</button>
+        <div class="msg" id="walletRetryMsg"></div>
       </div>
+    </div>
 
       <h3 style="margin-top:28px;font-size:15px;font-family:'Space Grotesk',sans-serif;">Transaction history</h3>
       <div class="card">
@@ -3202,9 +3209,49 @@ async function adjustWalletBalance(amountGHS, type, note, reference){
     })
   });
   let data = {};
-  try{ data = await res.json(); }catch(e){}
-  if(!res.ok) throw new Error((data && data.error) || 'Wallet update failed.');
+  const raw = await res.text();
+  try{ data = raw ? JSON.parse(raw) : {}; }catch(e){}
+  if(!res.ok){
+    let errMsg = (data && data.error) || '';
+    if(!errMsg){
+      if(res.status === 404) errMsg = 'Wallet API not found on the server — upload the latest _worker.js to Cloudflare Pages and redeploy.';
+      else if(res.status >= 500) errMsg = 'Wallet server error (HTTP ' + res.status + '). Check Cloudflare env: FIREBASE_SERVICE_ACCOUNT_JSON and PAYSTACK_SECRET_KEY.';
+      else errMsg = 'Wallet update failed (HTTP ' + res.status + ').';
+    }
+    throw new Error(errMsg);
+  }
   return data.balance;
+}
+
+async function retryWalletTopUp(reference){
+  const msg = document.getElementById('walletRetryMsg');
+  if(msg){ msg.className = 'msg'; msg.textContent = ''; }
+  const ref = (reference || (document.getElementById('walletRetryRef') && document.getElementById('walletRetryRef').value) || '').trim();
+  if(!ref){ if(msg){ msg.classList.add('show','error'); msg.textContent = 'Paste your Paystack reference first.'; } return; }
+  const amountEl = document.getElementById('walletTopUpAmount');
+  const amountGuess = amountEl && amountEl.value ? parseFloat(amountEl.value) : 1;
+  const btn = document.getElementById('walletRetryBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Retrying…'; }
+  try{
+    await adjustWalletBalance(amountGuess > 0 ? amountGuess : 1, 'topup', 'Top up via Paystack (retry)', ref);
+    if(msg){ msg.classList.add('show','ok'); msg.textContent = 'Wallet credited successfully — no second charge.'; }
+    document.getElementById('walletTopUpMsg').className = 'msg show ok';
+    document.getElementById('walletTopUpMsg').textContent = 'Top-up applied. Your balance is updated.';
+    loadWalletPage();
+  }catch(err){
+    if(msg){ msg.classList.add('show','error'); msg.textContent = err.message || String(err); }
+  }
+  if(btn){ btn.disabled = false; btn.textContent = 'Retry credit to wallet'; }
+}
+
+function showWalletTopUpFailed(reference, err){
+  const msg = document.getElementById('walletTopUpMsg');
+  msg.classList.add('show','error');
+  msg.textContent = 'Payment went through (reference: ' + reference + ') but crediting failed: ' + (err && err.message ? err.message : 'unknown error');
+  const wrap = document.getElementById('walletRetryWrap');
+  const refInput = document.getElementById('walletRetryRef');
+  if(wrap) wrap.style.display = 'block';
+  if(refInput) refInput.value = reference;
 }
 
 async function loadWalletPage(){
@@ -3271,9 +3318,11 @@ document.getElementById('walletTopUpBtn').addEventListener('click', ()=>{
       adjustWalletBalance(amount, 'topup', 'Top up via Paystack', response.reference).then(()=>{
         document.getElementById('walletTopUpAmount').value = '';
         msg.classList.add('show','ok'); msg.textContent = 'GHS ' + amount.toFixed(2) + ' added to your wallet.';
+        const rw = document.getElementById('walletRetryWrap');
+        if(rw) rw.style.display = 'none';
         loadWalletPage();
       }).catch(err=>{
-        msg.classList.add('show','error'); msg.textContent = 'Payment went through (reference: ' + response.reference + ') but the balance update failed. Contact the admin with this reference.';
+        showWalletTopUpFailed(response.reference, err);
       }).finally(()=>{
         btn.disabled = false; btn.textContent = 'Top up via Paystack';
       });
@@ -3284,6 +3333,7 @@ document.getElementById('walletTopUpBtn').addEventListener('click', ()=>{
   });
   handler.openIframe();
 });
+document.getElementById('walletRetryBtn').addEventListener('click', ()=> retryWalletTopUp());
 
 /* ---------------- PAYMENT METHOD CHOICE ----------------
    Shared modal offered anywhere a fee could be settled either from wallet balance or a fresh
