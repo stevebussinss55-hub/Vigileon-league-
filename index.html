@@ -591,6 +591,28 @@
   }
 
   .profile-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;}
+  .profile-hero{
+    text-align:center;padding:24px 20px;margin-bottom:18px;
+    background:radial-gradient(900px 320px at 50% 0%,rgba(180,140,255,0.14),transparent 55%),var(--panel);
+    border:1px solid var(--line);border-radius:16px;
+  }
+  .profile-hero-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;margin-top:12px;line-height:1.25;}
+  .profile-hero-meta{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5;}
+  .profile-hero-stats{display:flex;justify-content:center;flex-wrap:wrap;gap:20px 28px;margin-top:18px;font-family:'IBM Plex Mono',monospace;}
+  .profile-hero-stats div{text-align:center;}
+  .profile-hero-stats .n{font-size:20px;font-weight:700;}
+  .profile-hero-stats .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+  .profile-quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .profile-quick-actions button,.profile-quick-actions .ghost,.profile-quick-actions .smallbtn{width:auto;margin:0;font-size:12.5px;padding:8px 14px;}
+  .profile-wallet-strip{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:16px 18px;margin-bottom:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  }
+  .profile-section-head{
+    font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;
+    margin:28px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);
+  }
+  .profile-edit-card h3{margin:0 0 4px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);}
   .profile-stat{
     background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center;
   }
@@ -961,7 +983,7 @@
     <button data-view="streams"><span class="nav-ico">📺</span><span class="nav-label">Streams</span></button>
     <div class="nav-group">Account</div>
     <button data-view="wallet" id="walletNavBtn" style="display:none;"><span class="nav-ico">💰</span><span class="nav-label">Wallet</span></button>
-    <button data-view="profile"><span class="nav-ico">📋</span><span class="nav-label">My Matches</span></button>
+    <button data-view="profile"><span class="nav-ico">👤</span><span class="nav-label">Profile</span></button>
     <button data-view="confirm" id="confirmNavBtn" style="display:none;"><span class="nav-ico">✅</span><span class="nav-label">Confirm Results</span><span id="confirmBadge" class="nav-badge" style="display:none;"></span></button>
     <div class="nav-group">Info &amp; Support</div>
     <button data-view="rules"><span class="nav-ico">📘</span><span class="nav-label">How It Works</span></button>
@@ -1895,14 +1917,87 @@
     <div class="empty-state" id="confirmEmpty" style="display:none;">Nothing waiting on you right now.</div>
   </section>
 
-  <!-- MY MATCHES -->
+  <!-- PROFILE (account hub — matches, identity, payouts, settings) -->
   <section class="section" id="view-profile">
-    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-4px;margin-right:6px;color:var(--cyan);"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>My Matches</h2>
-    <p class="subtitle">Everything you've submitted and its review status.</p>
-    <div class="card" id="profileLoggedOut" style="display:none;">
-      <p style="color:var(--muted);font-size:14px;">Sign in to see your match history.</p>
+    <div class="section-banner banner-profile">
+      <div class="section-banner-inner">
+        <div class="section-banner-icon">👤</div>
+        <div>
+          <h3 class="section-banner-title">Your Profile</h3>
+          <p class="section-banner-sub">Gamertag, photo, stats, wallet, match history, and account settings — everything about your account in one place.</p>
+        </div>
+      </div>
     </div>
 
+    <div class="card" id="profileLoggedOut" style="display:none;">
+      <p style="color:var(--muted);font-size:14px;margin:0 0 14px;">Sign in to manage your profile, wallet, and match history.</p>
+      <button class="primary" type="button" onclick="showAuthCard()" style="width:auto;margin:0;">Sign in / Sign up</button>
+    </div>
+
+    <div id="profileHeroCard" class="profile-hero" style="display:none;"></div>
+
+    <div id="profileQuickActions" class="profile-quick-actions" style="display:none;">
+      <button class="ghost" type="button" onclick="if(currentUser)openPlayerProfile(currentUser.uid)">View public profile</button>
+      <button class="ghost" type="button" onclick="showView('wallet')">Wallet</button>
+      <button class="ghost" type="button" onclick="showView('report')">Report a match</button>
+      <button class="ghost" type="button" id="profileGoConfirmBtn" onclick="showView('confirm')">Confirm results</button>
+      <button class="ghost" type="button" onclick="showView('notifications')">Notifications</button>
+      <button class="ghost" type="button" onclick="showView('clans')">My clan</button>
+    </div>
+
+    <div id="profileWalletStrip" class="profile-wallet-strip" style="display:none;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-family:'IBM Plex Mono',monospace;">Wallet balance</div>
+        <div id="profileWalletBalance" style="font-family:'IBM Plex Mono',monospace;font-size:26px;color:var(--lime);margin-top:4px;">GHS 0.00</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="primary" type="button" onclick="showView('wallet')" style="width:auto;margin:0;padding:10px 16px;">Top up / history</button>
+      </div>
+    </div>
+
+    <div id="profileBadgesWrap"></div>
+
+    <h3 class="profile-section-head" id="profileEditHead" style="display:none;">Edit profile</h3>
+
+    <div class="card profile-edit-card" id="profileLoggedIn" style="display:none;">
+      <h3>Photo, bio &amp; gamertag</h3>
+      <p style="color:var(--muted);font-size:12.5px;margin:0 0 16px;line-height:1.5;">This is what other players see on your public profile. Your gamertag must match what you use in-game.</p>
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px;">
+        <div style="position:relative;cursor:pointer;display:inline-block;" id="avatarPreviewClickWrap">
+          <div id="avatarPreviewWrap" style="display:flex;justify-content:center;"></div>
+          <div id="avatarUploadSpinner" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.5);border-radius:50%;align-items:center;justify-content:center;font-size:10px;color:#fff;text-align:center;">Uploading…</div>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <label>Profile picture</label>
+          <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+          <button class="ghost" id="choosePhotoBtn" type="button" style="width:100%;">📷 Choose a photo</button>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">Tap your avatar or this button to pick a photo from your device. JPG/PNG, up to 5MB.</div>
+          <div style="margin-top:10px;">
+            <span id="photoURLToggle" style="font-size:11.5px;color:var(--cyan);cursor:pointer;">Or paste an image link instead</span>
+            <div id="photoURLWrap" style="display:none;margin-top:6px;">
+              <input type="text" id="photoURLInput" placeholder="Paste an image link (imgur, discord, etc.)">
+            </div>
+          </div>
+        </div>
+      </div>
+      <label>Bio <span style="color:var(--muted);font-weight:400;">(shown on your player profile)</span></label>
+      <textarea id="bioInput" rows="3" maxlength="200" placeholder="Say something about yourself, your favorite games, playstyle…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
+      <div id="bioCharCount" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:right;">0/200</div>
+      <button class="ghost" id="saveProfileCustomizationBtn" style="margin-top:10px;">Save profile</button>
+      <div class="msg" id="profileCustomizationMsg"></div>
+      <div class="msg" id="avatarUploadMsg"></div>
+
+      <div style="height:1px;background:var(--line);margin:20px 0;"></div>
+
+      <label>Your gamertag</label>
+      <input type="text" id="gamertagInput" placeholder="Set your display name">
+      <div id="gamertagAvailability" style="font-size:11.5px;margin-top:5px;min-height:14px;"></div>
+      <button class="ghost" id="saveGamertagBtn" style="margin-top:10px;">Save gamertag</button>
+      <div id="gamertagCooldownHint" style="font-size:11.5px;color:var(--muted);margin-top:6px;"></div>
+      <div class="msg" id="gamertagMsg"></div>
+    </div>
+
+    <h3 class="profile-section-head" id="profileStatsHead" style="display:none;">Performance</h3>
     <!-- PERSONAL STATS — everything here is either read directly off the user doc (wins,
          losses, streaks — already tracked for badges/leaderboard, just not surfaced as its
          own view before) or computed from completed challenges (net GHS, biggest win), which
@@ -1963,42 +2058,6 @@
       </div>
     </div>
 
-    <div class="card" id="profileLoggedIn" style="display:none;">
-      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px;">
-        <div style="position:relative;cursor:pointer;display:inline-block;" id="avatarPreviewClickWrap">
-          <div id="avatarPreviewWrap" style="display:flex;justify-content:center;"></div>
-          <div id="avatarUploadSpinner" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.5);border-radius:50%;align-items:center;justify-content:center;font-size:10px;color:#fff;text-align:center;">Uploading…</div>
-        </div>
-        <div style="flex:1;min-width:200px;">
-          <label>Profile picture</label>
-          <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
-          <button class="ghost" id="choosePhotoBtn" type="button" style="width:100%;">📷 Choose a photo</button>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px;">Tap your avatar or this button to pick a photo from your device. JPG/PNG, up to 5MB.</div>
-          <div style="margin-top:10px;">
-            <span id="photoURLToggle" style="font-size:11.5px;color:var(--cyan);cursor:pointer;">Or paste an image link instead</span>
-            <div id="photoURLWrap" style="display:none;margin-top:6px;">
-              <input type="text" id="photoURLInput" placeholder="Paste an image link (imgur, discord, etc.)">
-            </div>
-          </div>
-        </div>
-      </div>
-      <label>Bio <span style="color:var(--muted);font-weight:400;">(shown on your player profile)</span></label>
-      <textarea id="bioInput" rows="3" maxlength="200" placeholder="Say something about yourself, your favorite games, playstyle…" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
-      <div id="bioCharCount" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:right;">0/200</div>
-      <button class="ghost" id="saveProfileCustomizationBtn" style="margin-top:10px;">Save profile</button>
-      <div class="msg" id="profileCustomizationMsg"></div>
-      <div class="msg" id="avatarUploadMsg"></div>
-
-      <div style="height:1px;background:var(--line);margin:20px 0;"></div>
-
-      <label>Your gamertag</label>
-      <input type="text" id="gamertagInput" placeholder="Set your display name">
-      <div id="gamertagAvailability" style="font-size:11.5px;margin-top:5px;min-height:14px;"></div>
-      <button class="ghost" id="saveGamertagBtn" style="margin-top:10px;">Save gamertag</button>
-      <div id="gamertagCooldownHint" style="font-size:11.5px;color:var(--muted);margin-top:6px;"></div>
-      <div class="msg" id="gamertagMsg"></div>
-    </div>
-
     <!-- IDENTITY VERIFICATION — required before joining/reporting high-stake challenges or
          tournaments (see the anti-cheat threshold in the Admin panel). A one-time check: ID
          photo + selfie, reviewed by an admin, then it's just a badge from then on. -->
@@ -2017,6 +2076,86 @@
         <div class="msg" id="verificationMsg"></div>
       </div>
     </div>
+
+    <h3 class="profile-section-head" id="profilePayoutsHead" style="display:none;">Payouts &amp; Mobile Money</h3>
+    <p class="subtitle" id="profilePayoutsSub" style="display:none;margin-top:-4px;">Request tournament or 1v1 winnings after the admin confirms your result.</p>
+
+    <div class="card" id="withdrawalRequestCard" style="display:none;">
+      <h3 style="margin:0 0 4px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);">Request a tournament payout</h3>
+      <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">Placed in a tournament's prize spots? Enter your Mobile Money details and the admin will send your winnings and mark it paid here.</p>
+      <label>Tournament</label>
+      <select id="wdTournament"></select>
+      <label>Mobile Money network</label>
+      <select id="wdNetwork">
+        <option value="MTN">MTN Mobile Money</option>
+        <option value="Vodafone">Telecel Cash (Vodafone)</option>
+        <option value="AirtelTigo">AirtelTigo Money</option>
+      </select>
+      <label>Mobile Money number</label>
+      <input type="text" id="wdNumber" placeholder="e.g. 024xxxxxxx">
+      <label>Name on the Mobile Money account</label>
+      <input type="text" id="wdAccountName" placeholder="e.g. Kwame Mensah">
+      <button class="primary" id="wdSubmitBtn">Request payout</button>
+      <div class="msg" id="wdMsg"></div>
+    </div>
+
+    <div class="card" id="myWithdrawalsCard" style="display:none;">
+      <h3 style="margin:0 0 12px;font-family:'Space Grotesk',sans-serif;font-size:15px;">My payout requests</h3>
+      <table>
+        <thead><tr><th>Tournament</th><th>Network</th><th>Number</th><th>Name</th><th>Status</th></tr></thead>
+        <tbody id="myWithdrawalsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="challengePayoutCard" style="display:none;">
+      <h3 style="margin:0 0 4px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);">Request a 1v1 challenge payout</h3>
+      <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">Won a confirmed 1v1 challenge? Enter your Mobile Money details and the admin will send your winnings and mark it paid here.</p>
+      <label>Challenge</label>
+      <select id="cwdChallenge"></select>
+      <label>Mobile Money network</label>
+      <select id="cwdNetwork">
+        <option value="MTN">MTN Mobile Money</option>
+        <option value="Vodafone">Telecel Cash (Vodafone)</option>
+        <option value="AirtelTigo">AirtelTigo Money</option>
+      </select>
+      <label>Mobile Money number</label>
+      <input type="text" id="cwdNumber" placeholder="e.g. 024xxxxxxx">
+      <label>Name on the Mobile Money account</label>
+      <input type="text" id="cwdAccountName" placeholder="e.g. Kwame Mensah">
+      <button class="primary" id="cwdSubmitBtn">Request payout</button>
+      <div class="msg" id="cwdMsg"></div>
+    </div>
+
+    <div class="card" id="myChallengeWithdrawalsCard" style="display:none;">
+      <h3 style="margin:0 0 12px;font-family:'Space Grotesk',sans-serif;font-size:15px;">My challenge payout requests</h3>
+      <table>
+        <thead><tr><th>Opponent</th><th>Network</th><th>Number</th><th>Name</th><th>Status</th></tr></thead>
+        <tbody id="myChallengeWithdrawalsBody"></tbody>
+      </table>
+    </div>
+
+    <h3 class="profile-section-head" id="profileMatchesHead" style="display:none;">Match history</h3>
+    <p class="subtitle" id="profileMatchesSub" style="display:none;margin-top:-4px;">Everything you've reported and its review status.</p>
+    <div class="card" id="profileMatchesCard" style="display:none;">
+      <table>
+        <thead><tr><th>Game</th><th>Opponent</th><th>Result</th><th>Status</th><th></th></tr></thead>
+        <tbody id="myMatchesBody"></tbody>
+      </table>
+      <div class="empty-state" id="myMatchesLoading" style="display:none;">Loading your matches…</div>
+      <div class="empty-state" id="myMatchesEmpty" style="display:none;">No matches reported yet.</div>
+    </div>
+
+    <h3 class="profile-section-head" id="profileBlockedHead" style="display:none;">Blocked players</h3>
+    <p class="subtitle" id="profileBlockedSub" style="display:none;margin-top:-4px;">They can't challenge, message, or voice call you.</p>
+    <div class="card" id="profileBlockedCard" style="display:none;">
+      <table>
+        <thead><tr><th>Player</th><th></th></tr></thead>
+        <tbody id="blockedPlayersBody"></tbody>
+      </table>
+      <div class="empty-state" id="blockedPlayersEmpty" style="display:none;">You haven't blocked anyone.</div>
+    </div>
+
+    <h3 class="profile-section-head" id="profileSettingsHead" style="display:none;">Account settings</h3>
 
     <!-- NOTIFICATION PREFERENCES — controls push only; the in-app Notifications page always
          gets everything regardless of these toggles, so nothing is ever silently lost, this
@@ -2079,79 +2218,6 @@
           <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">New challenges, tournament entries, and Quick Match are locked until then.</div>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <table>
-        <thead><tr><th>Game</th><th>Opponent</th><th>Result</th><th>Status</th><th></th></tr></thead>
-        <tbody id="myMatchesBody"></tbody>
-      </table>
-      <div class="empty-state" id="myMatchesLoading" style="display:none;">Loading your matches…</div>
-      <div class="empty-state" id="myMatchesEmpty" style="display:none;">No matches reported yet.</div>
-    </div>
-
-    <h2 style="margin-top:32px;font-size:17px;">Blocked Players</h2>
-    <p class="subtitle">Blocked players can't challenge, message, or voice call you. This doesn't affect matches you've already played.</p>
-    <div class="card">
-      <table>
-        <thead><tr><th>Player</th><th></th></tr></thead>
-        <tbody id="blockedPlayersBody"></tbody>
-      </table>
-      <div class="empty-state" id="blockedPlayersEmpty" style="display:none;">You haven't blocked anyone.</div>
-    </div>
-
-    <div class="card" id="withdrawalRequestCard" style="display:none;">
-      <h3 style="margin:0 0 4px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);">Request a tournament payout</h3>
-      <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">Placed in a tournament's prize spots? Enter your Mobile Money details and the admin will send your winnings and mark it paid here.</p>
-      <label>Tournament</label>
-      <select id="wdTournament"></select>
-      <label>Mobile Money network</label>
-      <select id="wdNetwork">
-        <option value="MTN">MTN Mobile Money</option>
-        <option value="Vodafone">Telecel Cash (Vodafone)</option>
-        <option value="AirtelTigo">AirtelTigo Money</option>
-      </select>
-      <label>Mobile Money number</label>
-      <input type="text" id="wdNumber" placeholder="e.g. 024xxxxxxx">
-      <label>Name on the Mobile Money account</label>
-      <input type="text" id="wdAccountName" placeholder="e.g. Kwame Mensah">
-      <button class="primary" id="wdSubmitBtn">Request payout</button>
-      <div class="msg" id="wdMsg"></div>
-    </div>
-
-    <div class="card" id="myWithdrawalsCard" style="display:none;">
-      <h3 style="margin:0 0 12px;font-family:'Space Grotesk',sans-serif;font-size:15px;">My payout requests</h3>
-      <table>
-        <thead><tr><th>Tournament</th><th>Network</th><th>Number</th><th>Name</th><th>Status</th></tr></thead>
-        <tbody id="myWithdrawalsBody"></tbody>
-      </table>
-    </div>
-
-    <div class="card" id="challengePayoutCard" style="display:none;">
-      <h3 style="margin:0 0 4px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cyan);">Request a 1v1 challenge payout</h3>
-      <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">Won a confirmed 1v1 challenge? Enter your Mobile Money details and the admin will send your winnings and mark it paid here.</p>
-      <label>Challenge</label>
-      <select id="cwdChallenge"></select>
-      <label>Mobile Money network</label>
-      <select id="cwdNetwork">
-        <option value="MTN">MTN Mobile Money</option>
-        <option value="Vodafone">Telecel Cash (Vodafone)</option>
-        <option value="AirtelTigo">AirtelTigo Money</option>
-      </select>
-      <label>Mobile Money number</label>
-      <input type="text" id="cwdNumber" placeholder="e.g. 024xxxxxxx">
-      <label>Name on the Mobile Money account</label>
-      <input type="text" id="cwdAccountName" placeholder="e.g. Kwame Mensah">
-      <button class="primary" id="cwdSubmitBtn">Request payout</button>
-      <div class="msg" id="cwdMsg"></div>
-    </div>
-
-    <div class="card" id="myChallengeWithdrawalsCard" style="display:none;">
-      <h3 style="margin:0 0 12px;font-family:'Space Grotesk',sans-serif;font-size:15px;">My challenge payout requests</h3>
-      <table>
-        <thead><tr><th>Opponent</th><th>Network</th><th>Number</th><th>Name</th><th>Status</th></tr></thead>
-        <tbody id="myChallengeWithdrawalsBody"></tbody>
-      </table>
     </div>
   </section>
 
@@ -3079,6 +3145,7 @@ async function loadWalletPage(){
   if(!currentUser) return;
   const balance = await getWalletBalance();
   document.getElementById('walletBalanceDisplay').textContent = 'GHS ' + balance.toFixed(2);
+  refreshProfileWalletStrip();
 
   const list = document.getElementById('walletTxList');
   const loading = document.getElementById('walletTxLoading');
@@ -3340,6 +3407,9 @@ function showView(view){
   }
   if(view==='streams'){
     loadStreamsPage();
+  }
+  if(view==='profile'){
+    loadProfilePage();
   }
   if(view==='wallet'){
     if(!currentUser){ showView('leaderboard'); return; }
@@ -3764,6 +3834,9 @@ if(isConfigured){
         loadMyMatches();
         loadGamertag();
         loadProfileCustomization();
+        refreshProfileHero();
+        refreshProfileWalletStrip();
+        loadMyProfileBadges();
         checkAndAwardBadges();
         loadWithdrawalTournamentOptions();
         loadMyWithdrawals();
@@ -3801,7 +3874,22 @@ if(isConfigured){
   loadChallenges();
 }
 
+function setProfileHubVisible(visible){
+  const v = visible ? 'block' : 'none';
+  ['profileHeroCard','profileQuickActions','profileWalletStrip','profileEditHead','profileStatsHead','profilePayoutsHead','profilePayoutsSub','profileMatchesHead','profileMatchesSub','profileMatchesCard','profileBlockedHead','profileBlockedSub','profileBlockedCard','profileSettingsHead'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = v;
+  });
+  if(!visible){
+    const wrap = document.getElementById('profileBadgesWrap');
+    if(wrap) wrap.innerHTML = '';
+    const hero = document.getElementById('profileHeroCard');
+    if(hero) hero.innerHTML = '';
+  }
+}
+
 function updateGatedSections(){
+  setProfileHubVisible(!!currentUser);
   document.getElementById('reportLoggedOut').style.display = currentUser ? 'none' : 'block';
   document.getElementById('reportForm').style.display = currentUser ? 'block' : 'none';
   document.getElementById('profileLoggedOut').style.display = currentUser ? 'none' : 'block';
@@ -4195,6 +4283,7 @@ function updateAvatarPreview(){
   const url = document.getElementById('photoURLInput').value.trim();
   const name = document.getElementById('gamertagInput').value.trim() || (currentUser ? currentUser.email : '?');
   document.getElementById('avatarPreviewWrap').innerHTML = avatarHtml(name, true, url || null);
+  refreshProfileHero();
 }
 document.getElementById('photoURLInput').addEventListener('input', updateAvatarPreview);
 document.getElementById('bioInput').addEventListener('input', ()=>{
@@ -4245,6 +4334,7 @@ async function uploadAvatarPhoto(file){
     msg.classList.add('show','ok'); msg.textContent = 'Profile picture updated.';
     loadLeaderboard();
     checkAndAwardBadges();
+    refreshProfileHero();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = 'Could not upload photo: ' + (err.message||err);
   }
@@ -4416,6 +4506,7 @@ document.getElementById('saveProfileCustomizationBtn').addEventListener('click',
     msg.classList.add('show','ok'); msg.textContent = 'Saved.';
     loadLeaderboard();
     checkAndAwardBadges();
+    refreshProfileHero();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = 'Could not save: ' + (err.message||err);
   }
@@ -4432,6 +4523,7 @@ async function loadGamertag(){
   }
   setGamertagAvailability('');
   updateGamertagCooldownHint();
+  refreshProfileHero();
 }
 
 function updateGamertagCooldownHint(){
@@ -4501,6 +4593,7 @@ document.getElementById('saveGamertagBtn').addEventListener('click', async ()=>{
   btn.disabled = false;
   loadGamertag();
   loadLeaderboard();
+  refreshProfileHero();
 });
 
 document.getElementById('backfillGamertagBtn').addEventListener('click', async ()=>{
@@ -4848,6 +4941,73 @@ document.getElementById('disputeViewCloseBtn').addEventListener('click', ()=>{
   document.getElementById('disputeViewModal').style.display = 'none';
 });
 
+/* ---------------- PROFILE PAGE (account hub) ---------------- */
+async function refreshProfileHero(){
+  const card = document.getElementById('profileHeroCard');
+  if(!card || !currentUser) return;
+  try{
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    if(!doc.exists){ card.innerHTML = ''; return; }
+    const d = doc.data();
+    const name = d.gamertag || currentUser.email || 'Player';
+    const total = (d.wins||0) + (d.losses||0);
+    const pct = total > 0 ? Math.round(((d.wins||0)/total)*100) : 0;
+    const bioText = (d.bio || '').trim();
+    const verifiedMark = d.idVerified ? ' <span style="font-size:13px;color:var(--lime);vertical-align:middle;" title="Identity verified">✓ Verified</span>' : '';
+    card.innerHTML = `
+      <div style="display:flex;justify-content:center;">${avatarHtml(name, true, d.photoURL || null)}</div>
+      <div class="profile-hero-name">${escapeHtml(name)}${verifiedMark}</div>
+      <div class="profile-hero-meta">${bioText ? escapeHtml(bioText) : '<span style="opacity:0.85;">Add a bio below so other players know who you are.</span>'}</div>
+      <div class="profile-hero-meta" style="font-size:12px;margin-top:4px;">${escapeHtml(currentUser.email || '')}</div>
+      <div class="profile-hero-stats">
+        <div><div class="n" style="color:var(--lime);">${d.score||0}</div><div class="l">Points</div></div>
+        <div><div class="n">${d.wins||0}-${d.losses||0}</div><div class="l">Record</div></div>
+        <div><div class="n">${pct}%</div><div class="l">Win rate</div></div>
+        <div><div class="n">${d.currentStreak||0}</div><div class="l">Streak</div></div>
+      </div>`;
+  }catch(err){
+    console.log('Could not refresh profile hero:', err);
+  }
+}
+
+async function refreshProfileWalletStrip(){
+  const el = document.getElementById('profileWalletBalance');
+  if(!el || !currentUser) return;
+  try{
+    const balance = await getWalletBalance();
+    el.textContent = 'GHS ' + balance.toFixed(2);
+  }catch(err){
+    el.textContent = 'GHS —';
+  }
+}
+
+async function loadMyProfileBadges(){
+  const wrap = document.getElementById('profileBadgesWrap');
+  if(!wrap) return;
+  if(!currentUser){ wrap.innerHTML = ''; return; }
+  try{
+    const snap = await db.collection('playerBadges').where('userId','==',currentUser.uid).get();
+    const earnedBadgeIds = new Set();
+    snap.forEach(doc=> earnedBadgeIds.add(doc.data().badgeId));
+    wrap.innerHTML = renderBadges(currentUser.uid, earnedBadgeIds);
+  }catch(err){
+    console.log('Could not load profile badges:', err);
+    wrap.innerHTML = '';
+  }
+}
+
+async function loadProfilePage(){
+  if(!currentUser) return;
+  await Promise.all([
+    refreshProfileHero(),
+    refreshProfileWalletStrip(),
+    loadMyProfileBadges(),
+    loadPersonalStats(),
+    loadMyMatches(),
+    loadBlockedPlayers()
+  ]);
+}
+
 /* ---------------- MY MATCHES ---------------- */
 /* ---------------- PERSONAL STATS ---------------- */
 /* ---------------- REFER FRIENDS ---------------- */
@@ -5077,6 +5237,7 @@ async function loadPersonalStats(){
 }
 
 async function loadMyMatches(){
+  if(!currentUser) return;
   const body = document.getElementById('myMatchesBody');
   const empty = document.getElementById('myMatchesEmpty');
   const loading = document.getElementById('myMatchesLoading');
@@ -6749,8 +6910,14 @@ async function checkAndAwardBadges(){
     }
     // If we just earned something and happen to be looking at our own profile, refresh it
     // so the new badge appears immediately instead of on the next page visit.
-    if(toAward.length > 0 && document.getElementById('view-playerprofile').classList.contains('active')){
-      openPlayerProfile(uid);
+    if(toAward.length > 0){
+      if(document.getElementById('view-playerprofile').classList.contains('active')){
+        openPlayerProfile(uid);
+      }
+      if(document.getElementById('view-profile').classList.contains('active')){
+        loadMyProfileBadges();
+        refreshProfileHero();
+      }
     }
   }catch(err){
     console.log('Could not check achievements (non-blocking):', err);
@@ -9538,7 +9705,7 @@ async function loadChallenges(){
         ? '<span class="status-pill status-confirmed">You won — GHS ' + (c.payoutAmountGHS||0).toFixed(2) + '</span>'
         : '<span class="status-pill status-rejected">You lost</span>';
       if(won && !c.payoutRequested){
-        actions = '<span style="font-size:11.5px;color:var(--muted);">Request your payout from My Matches</span>';
+        actions = '<span style="font-size:11.5px;color:var(--muted);">Request your payout from your Profile</span>';
       } else if(won && c.payoutRequested && !c.payoutPaid){
         actions = '<span style="font-size:11.5px;color:var(--muted);">Payout requested</span>';
       } else if(won && c.payoutPaid){
@@ -9643,12 +9810,12 @@ async function pushNotification(toUid, {type, text, challengeId, dmOtherUid, dmO
     challenges:'1v1 challenge duel quick match stake',
     wallet:'wallet balance top up deposit withdraw money',
     report:'report match result score submit',
-    profile:'my matches history disputes',
+    profile:'profile account gamertag stats wallet match history settings payouts',
     feedback:'feedback contact support complaint suggestion',
     confirm:'confirm results opponent',
     terms:'terms privacy policy conditions'
   };
-  const PAGE_ICON = {leaderboard:'🏠',rules:'📘',tournaments:'🎮',clans:'🛡️',streams:'📺',challenges:'⚔️',wallet:'💰',report:'📝',profile:'📋',feedback:'💬',confirm:'✅',terms:'📄'};
+  const PAGE_ICON = {leaderboard:'🏠',rules:'📘',tournaments:'🎮',clans:'🛡️',streams:'📺',challenges:'⚔️',wallet:'💰',report:'📝',profile:'👤',feedback:'💬',confirm:'✅',terms:'📄'};
   const norm = t => (t||'').toString().toLowerCase();
   const esc = t => escapeHtml(String(t==null?'':t));
 
@@ -10318,7 +10485,7 @@ async function isBlockedPair(uidA, uidB){
 
 async function blockUser(targetUid, targetName){
   if(!currentUser || !targetUid) return;
-  if(!confirm('Block ' + targetName + '? They won\'t be able to challenge, message, or voice call you again. You can unblock them later from My Matches.')) return;
+  if(!confirm('Block ' + targetName + '? They won\'t be able to challenge, message, or voice call you again. You can unblock them later from your Profile.')) return;
   try{
     await db.collection('blocks').doc(currentUser.uid + '_' + targetUid).set({
       blockerId: currentUser.uid,
