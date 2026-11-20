@@ -25,5 +25,6 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://league.vigileongh.com/"
+  "fullScopeUrl": "https://league.vigileongh.com/",
+  "minSdkVersion": 24
 }
