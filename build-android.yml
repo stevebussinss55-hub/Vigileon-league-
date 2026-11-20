@@ -1,0 +1,37 @@
+# Builds the Play Store .aab from your live site using Bubblewrap (what PWABuilder uses).
+name: 2 - Build Android app (.aab)
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Install Bubblewrap (latest, targets current Android API)
+        run: npm install -g @bubblewrap/cli@latest && bubblewrap --version || true
+      - name: Accept Android licences
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: Point Bubblewrap at Java and Android SDK
+        run: |
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+      - name: Restore signing key
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > vigileon-release.keystore
+      - name: Build
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          bubblewrap update --skipVersionUpgrade --manifest=./twa-manifest.json
+          bubblewrap build --skipPwaValidation --manifest=./twa-manifest.json
+      - name: Show upload-key fingerprint
+        run: keytool -list -v -keystore vigileon-release.keystore -alias vigileon -storepass "${{ secrets.KEYSTORE_PASSWORD }}" | grep SHA256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vigileon-android
+          path: |
+            app-release-bundle.aab
+            app-release-signed.apk
