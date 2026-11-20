@@ -18,8 +18,20 @@ jobs:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          yes | bubblewrap update --skipVersionUpgrade --manifest=./twa-manifest.json
-          yes | bubblewrap build --skipPwaValidation --manifest=./twa-manifest.json
+          yes | bubblewrap update --skipVersionUpgrade --manifest=./twa-manifest.json > build-log.txt 2>&1 || true
+          yes | bubblewrap build --skipPwaValidation --manifest=./twa-manifest.json >> build-log.txt 2>&1
+      - name: Show the real error
+        if: always()
+        run: |
+          echo "===== ERRORS ====="
+          grep -i -A8 "what went wrong\|error" build-log.txt | head -60 || true
+          echo "===== LAST 60 LINES ====="
+          tail -n 60 build-log.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-log
+          path: build-log.txt
       - uses: actions/upload-artifact@v4
         with:
           name: vigileon-android
