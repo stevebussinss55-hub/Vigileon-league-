@@ -16,5 +16,14 @@
   "appVersionName": "1.0.0",
   "appVersion": "1",
   "fallbackType": "customtabs",
-  "signingKey": { "path": "./vigileon-release.keystore", "alias": "vigileon" }
+  "signingKey": {
+    "path": "./vigileon-release.keystore",
+    "alias": "vigileon"
+  },
+  "appVersionCode": 1,
+  "splashScreenFadeOutDuration": 300,
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://league.vigileongh.com/"
 }
