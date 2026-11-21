@@ -1,42 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- PLAY MODE: only inside the Google Play Android app (Trusted Web Activity). Hides cash entry fees,
-     stakes, wallet, withdrawals and referral cash. The normal website is unchanged.
-     Test in a browser with ?play=1 (turn off with ?play=0). -->
-<script>
-(function(){
-  var on=false;
-  try{
-    var q=new URLSearchParams(location.search).get('play');
-    if(q==='1') sessionStorage.setItem('vlPlay','1');
-    if(q==='0') sessionStorage.removeItem('vlPlay');
-    if((document.referrer||'').indexOf('android-app://com.vigileon.league')===0) sessionStorage.setItem('vlPlay','1');
-    on=sessionStorage.getItem('vlPlay')==='1';
-  }catch(e){ on=(document.referrer||'').indexOf('android-app://com.vigileon.league')===0; }
-  window.PLAY_MODE=on;
-  if(on) document.documentElement.classList.add('play-mode');
-})();
-</script>
-<style>
-html.play-mode #nav button[data-view="wallet"],
-html.play-mode #nav button[data-view="challenges"],
-html.play-mode #view-wallet,
-html.play-mode #view-challenges,
-html.play-mode #profileWalletStrip,
-html.play-mode #withdrawalRequestCard,
-html.play-mode #myWithdrawalsCard,
-html.play-mode #myChallengeWithdrawalsCard,
-html.play-mode #challengePayoutCard,
-html.play-mode #referralCard,
-html.play-mode #responsibleGamblingCard,
-html.play-mode #profilePayoutsHead,
-html.play-mode #profilePayoutsSub,
-html.play-mode #createChallengeCard,
-html.play-mode .hero-trust,
-html.play-mode .foot-nav a[onclick*="challenges"],
-html.play-mode [data-money]{display:none !important;}
-</style>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>VIGILEON LEAGUE — Tournaments &amp; 1v1 Challenges</title>
@@ -3547,7 +3511,6 @@ document.getElementById('nav').addEventListener('click', (e)=>{
 });
 
 function showView(view){
-  if(window.PLAY_MODE && (view==='wallet' || view==='challenges')) view='leaderboard';
   views.forEach(v=>{
     document.getElementById('view-'+v).classList.toggle('active', v===view);
   });
@@ -8844,7 +8807,6 @@ async function loadTournaments(){
     return tb - ta;
   });
 
-  if(window.PLAY_MODE){ for(let i=tournaments.length-1;i>=0;i--){ if((tournaments[i].data.feeGHS||0)>0) tournaments.splice(i,1); } }
   myTournamentEntries = {};
   if(currentUser){
     const mySnap = await db.collection('tournamentEntries').where('userId','==',currentUser.uid).get();
@@ -8907,13 +8869,13 @@ async function loadTournaments(){
         </div>
         <div style="text-align:right;">
           <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--lime);">${(t.isTestTournament || isFreeRealPrize) ? 'FREE' : 'GHS ' + t.feeGHS}</div>
-          <div style="font-size:11px;color:var(--muted);">${t.isTestTournament ? 'test — no real entry fee' : isFreeRealPrize ? (window.PLAY_MODE ? 'free entry' : 'free entry — real prize!') : 'entry fee'}</div>
+          <div style="font-size:11px;color:var(--muted);">${t.isTestTournament ? 'test — no real entry fee' : isFreeRealPrize ? 'free entry — real prize!' : 'entry fee'}</div>
         </div>
       </div>
       ${dateRange ? `<div style="margin-top:10px;font-size:12px;color:var(--cyan);font-family:'IBM Plex Mono',monospace;">${dateRange}</div>` : ''}
       ${(!closed && (t.startsAt || t.endsAt)) ? `<div class="t-countdown" data-start="${t.startsAt||''}" data-end="${t.endsAt||''}" style="margin-top:6px;font-size:12.5px;font-weight:600;"></div>` : ''}
-      ${window.PLAY_MODE ? '' : `<div style="margin-top:12px;font-size:13px;color:var(--muted);"><b style="color:var(--text);">Prizes:</b> ${escapeHtml(t.prizeText)}</div>`}
-      ${(t.platformFeePercent && !window.PLAY_MODE) ? `<div style="margin-top:4px;font-size:11.5px;color:var(--muted);">${t.platformFeePercent}% of each entry goes to running the platform; the rest funds the prize pool.</div>` : ''}
+      <div style="margin-top:12px;font-size:13px;color:var(--muted);"><b style="color:var(--text);">Prizes:</b> ${escapeHtml(t.prizeText)}</div>
+      ${t.platformFeePercent ? `<div style="margin-top:4px;font-size:11.5px;color:var(--muted);">${t.platformFeePercent}% of each entry goes to running the platform; the rest funds the prize pool.</div>` : ''}
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center;">
         ${actionButton}
         ${joined ? `<button class="ghost" onclick="openTournamentLobbyChat('${id}','${escapeHtml(t.name).replace(/'/g,"")}')">💬 Lobby Chat</button>` : ''}
@@ -9199,7 +9161,6 @@ async function closeTournament(tournamentId){
 }
 
 async function joinTournament(tournamentId, feeGHS, tournamentName){
-  if(window.PLAY_MODE && parseFloat(feeGHS) > 0){ alert('Paid tournaments are not available in this app.'); return; }
   if(!currentUser){ alert('Sign in first to join a tournament.'); return; }
   if(!PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY.indexOf('YOUR_PUBLIC_KEY') !== -1){
     alert('Paystack has not been set up yet by the site owner. Ask them to add their Paystack public key in the code.');
@@ -9287,7 +9248,7 @@ async function confirmTournamentEntry(tournamentId, reference, feeGHS, isTestEnt
     });
     let confirmMsg;
     if(isTestEntry) confirmMsg = 'Test entry created — no payment taken. You are entered! Good luck.';
-    else if(!feeGHS || parseFloat(feeGHS) === 0) confirmMsg = (window.PLAY_MODE ? 'You\'re entered. Good luck!' : 'You\'re entered — free entry, and the prize is real. Good luck!');
+    else if(!feeGHS || parseFloat(feeGHS) === 0) confirmMsg = 'You\'re entered — free entry, and the prize is real. Good luck!';
     else confirmMsg = 'Payment received — you are entered! Good luck.';
     alert(confirmMsg);
     if(!isTestEntry){
@@ -12620,38 +12581,6 @@ loadAnnouncementBanner();
     localStorage.setItem(ICON_UPDATE_KEY, '1');
     document.getElementById('iconUpdateNotice').style.display = 'none';
   });
-</script>
-<script>
-/* PLAY MODE text clean-up (does nothing on the normal website) */
-(function(){
-  if(!window.PLAY_MODE) return;
-  function run(){
-    var set=function(sel,txt){ var e=document.querySelector(sel); if(e) e.textContent=txt; };
-    set('#view-tournaments .section-banner-sub','Join free tournaments, play your matches and climb the standings.');
-    set('#view-rules .section-banner-sub','Read this before you join a tournament.');
-    var ne=document.getElementById('statNetEarnings'); if(ne && ne.parentElement) ne.parentElement.style.setProperty('display','none','important');
-    var np=document.getElementById('notifPrefPayouts'); if(np){ var l=np.closest('label')||np.parentElement; if(l) l.style.setProperty('display','none','important'); }
-    var money=/entry fee|stake|payout|paystack|refund|prize|wallet|mobile money|\bpot\b|\bpay\b/i;
-    ['view-rules','view-terms'].forEach(function(id){
-      var v=document.getElementById(id); if(!v) return;
-      v.querySelectorAll('h3').forEach(function(h){
-        if(/paid entry|cash stakes|payments/i.test(h.textContent)){
-          h.style.setProperty('display','none','important');
-          var n=h.nextElementSibling; if(n) n.style.setProperty('display','none','important');
-        }
-      });
-    });
-    var rules=document.getElementById('view-rules');
-    if(rules) rules.querySelectorAll('li,p').forEach(function(e){
-      if(money.test(e.textContent) && !e.querySelector('a[href^="mailto"]') && !e.classList.contains('section-banner-sub')) e.style.setProperty('display','none','important');
-    });
-    var terms=document.getElementById('view-terms');
-    if(terms) terms.querySelectorAll('li').forEach(function(e){
-      if(/paid-entry/i.test(e.textContent)) e.innerHTML='Vigileon League is a platform for organizing free eFootball and Call of Duty <b>tournaments</b> where players submit match results and climb the standings.';
-    });
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
-})();
 </script>
 </body>
 </html>
