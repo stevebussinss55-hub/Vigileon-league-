@@ -1,8 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- PLAY MODE: only inside the Google Play Android app (Trusted Web Activity). Hides cash entry fees,
+     stakes, wallet, withdrawals and referral cash. The normal website is unchanged.
+     Test in a browser with ?play=1 (turn off with ?play=0). -->
+<script>
+(function(){
+  var on=false;
+  try{
+    var q=new URLSearchParams(location.search).get('play');
+    if(q==='1') sessionStorage.setItem('vlPlay','1');
+    if(q==='0') sessionStorage.removeItem('vlPlay');
+    if((document.referrer||'').indexOf('android-app://com.vigileon.league')===0) sessionStorage.setItem('vlPlay','1');
+    on=sessionStorage.getItem('vlPlay')==='1';
+  }catch(e){ on=(document.referrer||'').indexOf('android-app://com.vigileon.league')===0; }
+  window.PLAY_MODE=on;
+  if(on) document.documentElement.classList.add('play-mode');
+})();
+</script>
+<style>
+html.play-mode #nav button[data-view="wallet"],
+html.play-mode #nav button[data-view="challenges"],
+html.play-mode #view-wallet,
+html.play-mode #view-challenges,
+html.play-mode #profileWalletStrip,
+html.play-mode #withdrawalRequestCard,
+html.play-mode #myWithdrawalsCard,
+html.play-mode #myChallengeWithdrawalsCard,
+html.play-mode #challengePayoutCard,
+html.play-mode #referralCard,
+html.play-mode #responsibleGamblingCard,
+html.play-mode #profilePayoutsHead,
+html.play-mode #profilePayoutsSub,
+html.play-mode #createChallengeCard,
+html.play-mode .hero-trust,
+html.play-mode .foot-nav a[onclick*="challenges"],
+html.play-mode [data-money]{display:none !important;}
+</style>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>VIGILEON LEAGUE — Tournaments &amp; 1v1 Challenges</title>
 <meta name="description" content="Vigileon League — Ghana's skill-based gaming platform. Join paid tournaments, challenge players head-to-head for cash, join clans, and track results across eFootball, Call of Duty &amp; more.">
 <meta name="robots" content="index, follow">
@@ -917,6 +953,50 @@
   .card{ transition: transform 0.18s ease, box-shadow 0.18s ease; }
   .card:hover{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
 </style>
+<style id="vl-header-polish">
+/* Header polish + app-like feel (no pinch zoom / double-tap zoom) */
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+header{position:sticky !important;top:0;z-index:60 !important;}
+header{background:linear-gradient(180deg,rgba(18,26,38,.97),rgba(11,15,20,.95)) !important;border-bottom:0 !important;box-shadow:0 6px 24px rgba(0,0,0,.28);}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(200,255,61,.55),rgba(52,230,216,.55),transparent);}
+body.light-theme header{background:linear-gradient(180deg,#fff,#F4F7FA) !important;box-shadow:0 4px 18px rgba(20,30,50,.08);}
+header .navwrap{height:60px;min-height:60px;gap:10px;}
+header .ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block;}
+header .ico-wrap{display:flex;align-items:center;justify-content:center;}
+header .icon-btn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);padding:0;display:inline-flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s,transform .1s;}
+header .icon-btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--panel-2);}
+header .icon-btn:active{transform:scale(.94);}
+#notifBellWrap[style*="display: block"]{display:inline-flex !important;}
+#inboxBtn[style*="inline-block"]{display:inline-flex !important;align-items:center;justify-content:center;gap:6px;}
+#inboxBtn{width:auto;min-width:40px;height:40px;padding:0 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);}
+#inboxBtn:hover{border-color:var(--cyan);color:var(--cyan);}
+header .nav-badge{margin:0;min-width:16px;height:16px;line-height:16px;padding:0 4px;font-size:9.5px;text-align:center;border:2px solid #0B0F14;border-radius:10px;box-sizing:content-box;}
+#notifBadge{top:-5px !important;right:-5px !important;}
+#inboxBadge{top:-6px !important;right:-6px !important;}
+header .logo-mark{width:34px;height:34px;border-radius:9px;object-fit:cover;filter:none;box-shadow:0 0 0 1px rgba(200,255,61,.45),0 4px 14px rgba(0,0,0,.35);}
+header .logo{gap:10px;}
+header .hdr-right{gap:8px;}
+header .authbox{margin-left:2px;gap:8px;}
+header .user-chip{padding:3px;gap:0;border:0;background:linear-gradient(135deg,var(--lime),var(--cyan));border-radius:50%;}
+header .user-chip .avatar-circle{width:34px;height:34px;border:2px solid #0B0F14;box-sizing:border-box;font-size:14px;}
+header .user-chip .user-email{display:none;}
+#signOutBtn{height:36px;padding:0 14px;border-radius:999px;background:transparent;border:1px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:600;}
+#signOutBtn:hover{border-color:var(--danger);color:var(--danger);}
+#signInBtn{height:38px;padding:0 18px;border-radius:999px;font-weight:700;letter-spacing:.2px;box-shadow:0 6px 18px rgba(200,255,61,.25);}
+@media(max-width:700px){
+  #signOutBtn{display:none !important;} /* Sign out lives in the side menu on phones */
+  header .navwrap{height:56px;min-height:56px;gap:8px;padding:0 max(10px,var(--sar)) 0 max(10px,var(--sal));}
+  header .icon-btn{width:38px;height:38px;}
+  #inboxBtn{height:38px;padding:0 10px;}
+  header .hdr-right{gap:6px;}
+}
+/* Fixed app frame: no sideways sliding or rubber-band on any page */
+html{overflow-x:hidden;max-width:100%;overscroll-behavior-x:none;}
+body{overflow-x:clip;max-width:100%;overscroll-behavior-x:none;}
+main{min-width:0;max-width:100%;}
+img,video,canvas{max-width:100%;}
+main *{overflow-wrap:break-word;}
+</style>
 </head>
 <body>
 <script>
@@ -969,17 +1049,17 @@
 
 <header>
   <div class="navwrap">
-    <button class="icon-btn" id="menuBtn" aria-label="Open menu" title="Menu" style="font-size:20px;">☰</button>
+    <button class="icon-btn" id="menuBtn" aria-label="Open menu" title="Menu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <div class="logo" onclick="showView('leaderboard')" title="Home"><img class="logo-mark" src="/icon-192.png?v=2026-09-10" alt=""><span class="logo-text">VIGILEON <b>LEAGUE</b></span></div>
     <div class="hdr-spacer"></div>
     <div class="hdr-right">
-      <button class="icon-btn" id="searchBtn" title="Search (press /)" aria-label="Search">🔍</button>
-      <span class="icon-btn" id="themeToggleBtn" title="Switch light/dark mode" role="button" aria-label="Switch theme">🌙</span>
+      <button class="icon-btn" id="searchBtn" title="Search (press /)" aria-label="Search"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+      <span class="icon-btn" id="themeToggleBtn" title="Switch light/dark mode" role="button" aria-label="Switch theme"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
       <div id="notifBellWrap" class="icon-btn" style="display:none;position:relative;" title="Notifications">
-        <span>🔔</span>
+        <span class="ico-wrap"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
         <span id="notifBadge" class="nav-badge" style="display:none;position:absolute;top:2px;right:-2px;">0</span>
       </div>
-      <button class="smallbtn" id="inboxBtn" style="display:none;position:relative;">📥<span class="inbox-label"> Inbox</span><span id="inboxBadge" class="nav-badge" style="display:none;position:absolute;top:-6px;right:-6px;">0</span></button>
+      <button class="smallbtn" id="inboxBtn" style="display:none;position:relative;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><span class="inbox-label"> Inbox</span><span id="inboxBadge" class="nav-badge" style="display:none;position:absolute;top:-6px;right:-6px;">0</span></button>
       <div class="authbox" id="authBox">Loading…</div>
     </div>
     <div id="notifDropdown" style="display:none;position:absolute;top:68px;right:20px;width:min(340px, calc(100vw - 24px));max-height:60vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:1000;padding:8px;">
@@ -2912,10 +2992,10 @@ async function renderOnlineNow(allStatus){
   list.innerHTML = onlineEntries.map(([uid, s])=>{
     const name = s.gamertag;
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);">
-      <div style="flex:1;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPlayerProfile('${uid}')">
+      <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPlayerProfile('${uid}')">
         ${avatarHtml(name)}
-        <div>
-          <div style="font-weight:600;font-size:14px;">${escapeHtml(name)}</div>
+        <div style="min-width:0;">
+          <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(name)}</div>
           <div style="font-size:11.5px;color:#3ECF6A;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3ECF6A;margin-right:4px;vertical-align:middle;"></span>Online now</div>
         </div>
       </div>
@@ -3511,6 +3591,7 @@ document.getElementById('nav').addEventListener('click', (e)=>{
 });
 
 function showView(view){
+  if(window.PLAY_MODE && (view==='wallet' || view==='challenges')) view='leaderboard';
   views.forEach(v=>{
     document.getElementById('view-'+v).classList.toggle('active', v===view);
   });
@@ -8807,6 +8888,7 @@ async function loadTournaments(){
     return tb - ta;
   });
 
+  if(window.PLAY_MODE){ for(let i=tournaments.length-1;i>=0;i--){ if((tournaments[i].data.feeGHS||0)>0) tournaments.splice(i,1); } }
   myTournamentEntries = {};
   if(currentUser){
     const mySnap = await db.collection('tournamentEntries').where('userId','==',currentUser.uid).get();
@@ -8869,13 +8951,13 @@ async function loadTournaments(){
         </div>
         <div style="text-align:right;">
           <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--lime);">${(t.isTestTournament || isFreeRealPrize) ? 'FREE' : 'GHS ' + t.feeGHS}</div>
-          <div style="font-size:11px;color:var(--muted);">${t.isTestTournament ? 'test — no real entry fee' : isFreeRealPrize ? 'free entry — real prize!' : 'entry fee'}</div>
+          <div style="font-size:11px;color:var(--muted);">${t.isTestTournament ? 'test — no real entry fee' : isFreeRealPrize ? (window.PLAY_MODE ? 'free entry' : 'free entry — real prize!') : 'entry fee'}</div>
         </div>
       </div>
       ${dateRange ? `<div style="margin-top:10px;font-size:12px;color:var(--cyan);font-family:'IBM Plex Mono',monospace;">${dateRange}</div>` : ''}
       ${(!closed && (t.startsAt || t.endsAt)) ? `<div class="t-countdown" data-start="${t.startsAt||''}" data-end="${t.endsAt||''}" style="margin-top:6px;font-size:12.5px;font-weight:600;"></div>` : ''}
-      <div style="margin-top:12px;font-size:13px;color:var(--muted);"><b style="color:var(--text);">Prizes:</b> ${escapeHtml(t.prizeText)}</div>
-      ${t.platformFeePercent ? `<div style="margin-top:4px;font-size:11.5px;color:var(--muted);">${t.platformFeePercent}% of each entry goes to running the platform; the rest funds the prize pool.</div>` : ''}
+      ${window.PLAY_MODE ? '' : `<div style="margin-top:12px;font-size:13px;color:var(--muted);"><b style="color:var(--text);">Prizes:</b> ${escapeHtml(t.prizeText)}</div>`}
+      ${(t.platformFeePercent && !window.PLAY_MODE) ? `<div style="margin-top:4px;font-size:11.5px;color:var(--muted);">${t.platformFeePercent}% of each entry goes to running the platform; the rest funds the prize pool.</div>` : ''}
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center;">
         ${actionButton}
         ${joined ? `<button class="ghost" onclick="openTournamentLobbyChat('${id}','${escapeHtml(t.name).replace(/'/g,"")}')">💬 Lobby Chat</button>` : ''}
@@ -9161,6 +9243,7 @@ async function closeTournament(tournamentId){
 }
 
 async function joinTournament(tournamentId, feeGHS, tournamentName){
+  if(window.PLAY_MODE && parseFloat(feeGHS) > 0){ alert('Paid tournaments are not available in this app.'); return; }
   if(!currentUser){ alert('Sign in first to join a tournament.'); return; }
   if(!PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY.indexOf('YOUR_PUBLIC_KEY') !== -1){
     alert('Paystack has not been set up yet by the site owner. Ask them to add their Paystack public key in the code.');
@@ -9248,7 +9331,7 @@ async function confirmTournamentEntry(tournamentId, reference, feeGHS, isTestEnt
     });
     let confirmMsg;
     if(isTestEntry) confirmMsg = 'Test entry created — no payment taken. You are entered! Good luck.';
-    else if(!feeGHS || parseFloat(feeGHS) === 0) confirmMsg = 'You\'re entered — free entry, and the prize is real. Good luck!';
+    else if(!feeGHS || parseFloat(feeGHS) === 0) confirmMsg = (window.PLAY_MODE ? 'You\'re entered. Good luck!' : 'You\'re entered — free entry, and the prize is real. Good luck!');
     else confirmMsg = 'Payment received — you are entered! Good luck.';
     alert(confirmMsg);
     if(!isTestEntry){
@@ -11564,7 +11647,7 @@ document.getElementById('inboxBtn').addEventListener('click', openInbox);
 function updateThemeIcon(){
   const isLight = document.body.classList.contains('light-theme');
   // Icon shown is what tapping it switches TO, not the current mode.
-  document.getElementById('themeToggleBtn').textContent = isLight ? '🌙' : '☀️';
+  document.getElementById('themeToggleBtn').innerHTML = isLight ? '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>' : '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
 }
 document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
   document.body.classList.toggle('light-theme');
@@ -12581,6 +12664,42 @@ loadAnnouncementBanner();
     localStorage.setItem(ICON_UPDATE_KEY, '1');
     document.getElementById('iconUpdateNotice').style.display = 'none';
   });
+</script>
+<script>
+document.addEventListener("gesturestart",function(e){e.preventDefault();});
+document.addEventListener("dblclick",function(e){e.preventDefault();},{passive:false});
+</script>
+<script>
+/* PLAY MODE text clean-up (does nothing on the normal website) */
+(function(){
+  if(!window.PLAY_MODE) return;
+  function run(){
+    var set=function(sel,txt){ var e=document.querySelector(sel); if(e) e.textContent=txt; };
+    set('#view-tournaments .section-banner-sub','Join free tournaments, play your matches and climb the standings.');
+    set('#view-rules .section-banner-sub','Read this before you join a tournament.');
+    var ne=document.getElementById('statNetEarnings'); if(ne && ne.parentElement) ne.parentElement.style.setProperty('display','none','important');
+    var np=document.getElementById('notifPrefPayouts'); if(np){ var l=np.closest('label')||np.parentElement; if(l) l.style.setProperty('display','none','important'); }
+    var money=/entry fee|stake|payout|paystack|refund|prize|wallet|mobile money|\bpot\b|\bpay\b/i;
+    ['view-rules','view-terms'].forEach(function(id){
+      var v=document.getElementById(id); if(!v) return;
+      v.querySelectorAll('h3').forEach(function(h){
+        if(/paid entry|cash stakes|payments/i.test(h.textContent)){
+          h.style.setProperty('display','none','important');
+          var n=h.nextElementSibling; if(n) n.style.setProperty('display','none','important');
+        }
+      });
+    });
+    var rules=document.getElementById('view-rules');
+    if(rules) rules.querySelectorAll('li,p').forEach(function(e){
+      if(money.test(e.textContent) && !e.querySelector('a[href^="mailto"]') && !e.classList.contains('section-banner-sub')) e.style.setProperty('display','none','important');
+    });
+    var terms=document.getElementById('view-terms');
+    if(terms) terms.querySelectorAll('li').forEach(function(e){
+      if(/paid-entry/i.test(e.textContent)) e.innerHTML='Vigileon League is a platform for organizing free eFootball and Call of Duty <b>tournaments</b> where players submit match results and climb the standings.';
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+})();
 </script>
 </body>
 </html>
