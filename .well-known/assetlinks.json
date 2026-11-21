@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "com.vigileon.league",
-    "sha256_cert_fingerprints": ["REPLACE_WITH_SHA256_FROM_PLAY_CONSOLE_APP_SIGNING"]
+    "sha256_cert_fingerprints": ["2D:77:76:FD:65:9D:47:4C:25:52:23:6F:9F:EE:DB:1E:8E:D0:E4:8D:31:2F:43:AB:6D:DC:B3:B3:FA:57:13:8B"]
   }
 }]
