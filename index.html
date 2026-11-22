@@ -1011,6 +1011,11 @@ html.play-mode .hero-cta button[onclick*="challenges"]{display:none !important;}
 .gp-art{width:52px;height:52px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0;}
 .gp-art img{width:100%;height:100%;object-fit:cover;display:block;}
 .gp-label{font-size:11px;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.gp-current{flex-direction:row;justify-content:flex-start;gap:12px;width:100%;text-align:left;padding:8px 12px 8px 8px;margin-bottom:2px;}
+.gp-current .gp-art{width:44px;height:44px;}
+.gp-current .gp-label{font-size:15px;font-weight:600;flex:1;white-space:normal;text-align:left;}
+.gp-chev{font-size:14px;color:var(--muted);flex-shrink:0;padding:0 4px;transition:transform .15s;}
+.gp-open .gp-chev{transform:rotate(180deg);}
 </style>
 </head>
 <body>
@@ -13115,41 +13120,67 @@ function gpInitials(label){
 function buildGamePicker(sel){
   if(!sel || sel.dataset.gpBuilt) return;
   sel.dataset.gpBuilt = '1';
-  const wrap = document.createElement('div');
-  wrap.className = 'gp-wrap';
-  wrap.setAttribute('role','radiogroup');
-  wrap.setAttribute('aria-label', 'Choose a game');
+  const box = document.createElement('div');
+  box.className = 'gp-box';
+  const grid = document.createElement('div');
+  grid.className = 'gp-wrap';
+  grid.setAttribute('role','radiogroup');
+  grid.setAttribute('aria-label', 'Choose a game');
+  grid.style.display = 'none';           // collapsed until the player opens it
+  const current = document.createElement('button');
+  current.type = 'button';
+  current.className = 'gp-tile gp-current';
+  current.setAttribute('aria-expanded','false');
+  const curArt = document.createElement('span'); curArt.className = 'gp-art';
+  const curLabel = document.createElement('span'); curLabel.className = 'gp-label';
+  const chev = document.createElement('span'); chev.className = 'gp-chev'; chev.textContent = '▾';
+  current.appendChild(curArt); current.appendChild(curLabel); current.appendChild(chev);
   const tiles = [];
+  function artFor(label, value){
+    return GAME_ART[label] || GAME_ART[value] || { img:'', bg:'#3a4656' };
+  }
+  function fillArt(box2, label, value){
+    const art = artFor(label, value);
+    box2.innerHTML = '';
+    box2.style.background = art.bg;
+    box2.textContent = gpInitials(label);
+    if(art.img){
+      const im = new Image();
+      im.alt = '';
+      im.onload = () => { box2.textContent = ''; box2.appendChild(im); };
+      im.src = art.img;
+    }
+  }
+  function setOpen(open){
+    grid.style.display = open ? 'grid' : 'none';
+    current.setAttribute('aria-expanded', open ? 'true' : 'false');
+    current.classList.toggle('gp-open', open);
+  }
+  current.addEventListener('click', () => setOpen(grid.style.display === 'none'));
   Array.from(sel.options).forEach(opt => {
     const label = opt.textContent.trim();
-    const art = GAME_ART[label] || GAME_ART[opt.value] || { img:'', bg:'#3a4656' };
     const tile = document.createElement('button');
     tile.type = 'button';
     tile.className = 'gp-tile';
     tile.setAttribute('role','radio');
     tile.setAttribute('aria-label', label);
     tile.dataset.value = opt.value;
-    const box = document.createElement('span');
-    box.className = 'gp-art';
-    box.style.background = art.bg;
-    box.textContent = gpInitials(label);
-    if(art.img){
-      const im = new Image();
-      im.alt = '';
-      im.onload = () => { box.textContent = ''; box.appendChild(im); };
-      im.src = art.img;
-    }
+    tile.dataset.label = label;
+    const box2 = document.createElement('span');
+    box2.className = 'gp-art';
+    fillArt(box2, label, opt.value);
     const name = document.createElement('span');
     name.className = 'gp-label';
     name.textContent = label;
-    tile.appendChild(box);
+    tile.appendChild(box2);
     tile.appendChild(name);
     tile.addEventListener('click', () => {
       sel.value = opt.value;
       sel.dispatchEvent(new Event('change', { bubbles: true }));
+      setOpen(false);      // collapse after choosing
       syncTiles();
     });
-    wrap.appendChild(tile);
+    grid.appendChild(tile);
     tiles.push(tile);
   });
   function syncTiles(){
@@ -13158,10 +13189,18 @@ function buildGamePicker(sel){
       t.classList.toggle('on', on);
       t.setAttribute('aria-checked', on ? 'true' : 'false');
     });
+    const chosen = tiles.find(t => t.dataset.value === sel.value) || tiles[0];
+    if(chosen){
+      fillArt(curArt, chosen.dataset.label, chosen.dataset.value);
+      curLabel.textContent = chosen.dataset.label;
+      current.setAttribute('aria-label', 'Game: ' + chosen.dataset.label + '. Tap to change.');
+    }
   }
   sel.addEventListener('change', syncTiles);
   sel.style.display = 'none';
-  sel.parentNode.insertBefore(wrap, sel);
+  box.appendChild(current);
+  box.appendChild(grid);
+  sel.parentNode.insertBefore(box, sel);
   syncTiles();
 }
 function buildAllGamePickers(){
