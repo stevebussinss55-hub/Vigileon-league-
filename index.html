@@ -3214,9 +3214,38 @@ document.getElementById('postAnnouncementBtn').addEventListener('click', async (
       createdBy: currentUser.email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    // Also put it in every player's notifications, so nobody misses it.
+    msg.classList.add('show','ok'); msg.textContent = 'Posted. Sending to every player…';
+    const usersSnap = await db.collection('users').get();
+    let batch = db.batch(), inBatch = 0, sent = 0;
+    for(const u of usersSnap.docs){
+      batch.set(db.collection('users').doc(u.id).collection('notifications').doc(), {
+        type: 'announcement',
+        title: title,
+        text: message,
+        url: null,
+        fromUid: currentUser.uid,
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      inBatch++; sent++;
+      if(inBatch === 450){ await batch.commit(); batch = db.batch(); inBatch = 0; }
+    }
+    if(inBatch > 0) await batch.commit();
+    // Phone alerts to every player who allowed notifications (server checks admin sign-in)
+    let pushSent = false;
+    try{
+      const idToken = await currentUser.getIdToken();
+      const pr = await fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+        body: JSON.stringify({ target: 'all', title: 'Vigileon: ' + title, body: message, url: '/' })
+      });
+      pushSent = pr.ok;
+    }catch(e){ pushSent = false; }
     document.getElementById('announcementTitleInput').value = '';
     document.getElementById('announcementMessageInput').value = '';
-    msg.classList.add('show','ok'); msg.textContent = 'Posted — it will show on the Home page for everyone.';
+    msg.classList.add('show','ok'); msg.textContent = 'Sent to ' + sent + ' players' + (pushSent ? ' with phone alerts' : ' (phone alerts could not be sent; check the server setup)') + ', and shown on the Home page.';
     loadAnnouncementsAdmin();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = 'Could not post: ' + err.message;
@@ -3731,6 +3760,7 @@ function renderAuthBox(){
   if(currentUser){
     const email = currentUser.email || 'Signed in';
     const initial = email.trim().charAt(0).toUpperCase() || '?';
+    applyHeaderAvatar();
     authBox.innerHTML = `<span class="user-chip" role="button" tabindex="0" title="Open your profile" onclick="showView('profile')" onkeydown="if(event.key==='Enter')showView('profile')" style="cursor:pointer;"><span class="avatar-circle">${escapeHtml(initial)}</span><span class="user-email">${escapeHtml(email)}</span></span><button class="smallbtn" id="signOutBtn">Sign out</button>`;
     document.getElementById('signOutBtn').onclick = ()=> confirmSignOut();
     if(smFoot){
@@ -4655,6 +4685,7 @@ async function uploadAvatarPhoto(file){
     loadLeaderboard();
     checkAndAwardBadges();
     refreshProfileHero();
+    applyHeaderAvatar();
     loadOnboardingCard();
   }catch(err){
     msg.classList.add('show','error'); msg.textContent = 'Could not upload photo: ' + (err.message||err);
@@ -5518,6 +5549,25 @@ document.getElementById('disputeViewCloseBtn').addEventListener('click', ()=>{
 });
 
 /* ---------------- PROFILE PAGE (account hub) ---------------- */
+// Shows the player's uploaded photo in the top-right avatar and the side menu.
+async function applyHeaderAvatar(){
+  if(!currentUser || !db) return;
+  try{
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    const url = doc.exists ? (doc.data().photoURL || '') : '';
+    if(!url) return;
+    document.querySelectorAll('.user-chip .avatar-circle, .sm-user .avatar-circle').forEach(el=>{
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.className = el.className;
+      img.style.cssText = 'object-fit:cover;border-radius:50%;' + (el.getAttribute('style') || '');
+      img.onerror = () => { /* keep the letter if the photo can't load */ };
+      el.replaceWith(img);
+    });
+  }catch(e){}
+}
+
 async function refreshProfileHero(){
   const card = document.getElementById('profileHeroCard');
   if(!card || !currentUser) return;

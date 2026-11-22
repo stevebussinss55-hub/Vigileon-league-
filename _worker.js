@@ -102,6 +102,21 @@ function tokensFromDoc(doc) {
 const jsonPush = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
 
+// Confirms the request comes from a signed-in admin, using the Firebase ID token they send.
+async function isAdminRequest(request, sa, token, base) {
+  const h = request.headers.get('Authorization') || '';
+  const idToken = h.startsWith('Bearer ') ? h.slice(7) : '';
+  if (!idToken) return false;
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyAEPK1dKzCZRDawHg0n0lSQ8VIukQBNDk4', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken })
+  });
+  const d = await r.json().catch(() => ({}));
+  const email = d.users && d.users[0] && d.users[0].email;
+  if (!email) return false;
+  const a = await gfetch(`${base}/admins/${encodeURIComponent(email)}`, token);
+  return a.ok;
+}
+
 async function handleSendPush({ request, env }) {
   if (request.method !== 'POST') return jsonPush({ error: 'Method not allowed' }, 405);
 
@@ -115,7 +130,7 @@ async function handleSendPush({ request, env }) {
 
   const { target, uid, title, body, url } = payload || {};
   if (!title || !body) return jsonPush({ error: 'title and body are required.' }, 400);
-  if (target !== 'admin' && target !== 'player') return jsonPush({ error: 'target must be "admin" or "player".' }, 400);
+  if (target !== 'admin' && target !== 'player' && target !== 'all') return jsonPush({ error: 'target must be "admin", "player" or "all".' }, 400);
   if (target === 'player' && !uid) return jsonPush({ error: 'uid is required when target is "player".' }, 400);
 
   try {
@@ -125,7 +140,21 @@ async function handleSendPush({ request, env }) {
 
     const owners = []; // [{ docName, tokens }] — so dead tokens get removed from the right doc
 
-    if (target === 'admin') {
+    if (target === 'all') {
+      // Every player with a registered device. Admins only.
+      if (!(await isAdminRequest(request, sa, token, base))) return jsonPush({ error: 'Admins only.' }, 403);
+      let pageToken = '', pages = 0;
+      do {
+        const r = await gfetch(`${base}/users?pageSize=300${pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : ''}`, token);
+        if (!r.ok) throw new Error('Could not read users: ' + JSON.stringify(r.data));
+        for (const doc of (r.data.documents || [])) {
+          const t = tokensFromDoc(doc);
+          if (t.length) owners.push({ docName: doc.name, tokens: t });
+        }
+        pageToken = r.data.nextPageToken || '';
+        pages++;
+      } while (pageToken && pages < 50);
+    } else if (target === 'admin') {
       // Admins are listed by email in /admins; push tokens live on each admin's /users doc.
       const list = await gfetch(`${base}/admins?pageSize=100`, token);
       if (!list.ok) throw new Error('Could not read admins: ' + JSON.stringify(list.data));
