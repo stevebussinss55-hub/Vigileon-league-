@@ -1002,6 +1002,15 @@ html.play-mode [onclick*="showView('challenges')"],
 html.play-mode .hero-art,
 html.play-mode #onboardingCard,
 html.play-mode .hero-cta button[onclick*="challenges"]{display:none !important;}
+/* GAME PICKER: square tiles instead of a plain dropdown. The original <select> stays in place and keeps working. */
+.gp-wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 4px;}
+@media(max-width:380px){.gp-wrap{grid-template-columns:repeat(3,1fr);}}
+.gp-tile{background:var(--panel-2);border:2px solid var(--line);border-radius:14px;padding:8px 4px 7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text);font:inherit;min-width:0;transition:border-color .15s,transform .1s;}
+.gp-tile:active{transform:scale(.96);}
+.gp-tile.on{border-color:var(--lime);box-shadow:0 0 0 1px rgba(200,255,61,.35);}
+.gp-art{width:52px;height:52px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0;}
+.gp-art img{width:100%;height:100%;object-fit:cover;display:block;}
+.gp-label{font-size:11px;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
 </style>
 </head>
 <body>
@@ -13008,6 +13017,87 @@ function confirmSignOut(){
     auth.signOut();
   }
 }
+</script>
+<script>
+/* GAME PICKER: builds square game tiles from each game dropdown.
+   Logos load from /game-<key>.png if you upload them; otherwise a coloured tile with initials is shown. */
+const GAME_ART = {
+  'eFootball':{img:'/game-efootball.png',bg:'#1e6bd6'},
+  'Call of Duty':{img:'/game-codm.png',bg:'#3f5a2a'},
+  'PUBG Mobile':{img:'/game-pubgm.png',bg:'#c98a1a'},
+  'Free Fire':{img:'/game-freefire.png',bg:'#e0662b'},
+  'FC 25':{img:'/game-fc25.png',bg:'#0a7a46'},
+  'NBA 2K':{img:'/game-nba2k.png',bg:'#7a3fc4'},
+  'Tekken':{img:'/game-tekken.png',bg:'#b3262e'},
+  'Mortal Kombat':{img:'/game-mortalkombat.png',bg:'#9b1b1b'},
+  'Ludo':{img:'/game-ludo.png',bg:'#2f8f5b'},
+  'Dame':{img:'/game-dame.png',bg:'#5b5b7a'},
+  'Spades':{img:'/game-spades.png',bg:'#26313f'},
+  'Other':{img:'',bg:'#3a4656'}
+};
+function gpInitials(label){
+  const words = String(label).replace(/[^A-Za-z0-9 ]/g,' ').trim().split(/\s+/).filter(Boolean);
+  if(words.length === 0) return '?';
+  if(words.length === 1) return words[0].slice(0,2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+function buildGamePicker(sel){
+  if(!sel || sel.dataset.gpBuilt) return;
+  sel.dataset.gpBuilt = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'gp-wrap';
+  wrap.setAttribute('role','radiogroup');
+  wrap.setAttribute('aria-label', 'Choose a game');
+  const tiles = [];
+  Array.from(sel.options).forEach(opt => {
+    const label = opt.textContent.trim();
+    const art = GAME_ART[label] || GAME_ART[opt.value] || { img:'', bg:'#3a4656' };
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'gp-tile';
+    tile.setAttribute('role','radio');
+    tile.setAttribute('aria-label', label);
+    tile.dataset.value = opt.value;
+    const box = document.createElement('span');
+    box.className = 'gp-art';
+    box.style.background = art.bg;
+    box.textContent = gpInitials(label);
+    if(art.img){
+      const im = new Image();
+      im.alt = '';
+      im.onload = () => { box.textContent = ''; box.appendChild(im); };
+      im.src = art.img;
+    }
+    const name = document.createElement('span');
+    name.className = 'gp-label';
+    name.textContent = label;
+    tile.appendChild(box);
+    tile.appendChild(name);
+    tile.addEventListener('click', () => {
+      sel.value = opt.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      syncTiles();
+    });
+    wrap.appendChild(tile);
+    tiles.push(tile);
+  });
+  function syncTiles(){
+    tiles.forEach(t => {
+      const on = t.dataset.value === sel.value;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  }
+  sel.addEventListener('change', syncTiles);
+  sel.style.display = 'none';
+  sel.parentNode.insertBefore(wrap, sel);
+  syncTiles();
+}
+function buildAllGamePickers(){
+  ['tGame','chGame','qmGame','rGame'].forEach(id => buildGamePicker(document.getElementById(id)));
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildAllGamePickers);
+else buildAllGamePickers();
 </script>
 </body>
 </html>
