@@ -4660,6 +4660,28 @@ document.getElementById('avatarFileInput').addEventListener('change', async (e)=
   await uploadAvatarPhoto(file);
 });
 
+// Shrinks an image to a square JPEG data URL (for profile photos on the free plan).
+function shrinkImageToDataUrl(file, size, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=> reject(new Error('Could not read that file.'));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=> reject(new Error('That file could not be read as an image. Please choose a photo from your gallery.'));
+      img.onload = ()=>{
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function uploadAvatarPhoto(file){
   const msg = document.getElementById('avatarUploadMsg');
   msg.className = 'msg'; msg.textContent = '';
@@ -4671,11 +4693,10 @@ async function uploadAvatarPhoto(file){
   const spinner = document.getElementById('avatarUploadSpinner');
   spinner.style.display = 'flex';
   try{
-    // One fixed path per player (no filename/extension) — re-uploading always overwrites
-    // the same file instead of piling up orphaned old photos in Storage.
-    const ref = storage.ref('avatars/' + currentUser.uid);
-    await ref.put(file, { contentType: file.type });
-    const url = await ref.getDownloadURL();
+    // Free-plan friendly: shrink the photo to a small square and store it in the player's
+    // profile document (no Firebase Storage needed). Keeps the file well under Firestore's limit.
+    const url = await shrinkImageToDataUrl(file, 256, 0.85);
+    if(url.length > 300000) throw new Error('That photo is still too large. Try a smaller picture.');
 
     await db.collection('users').doc(currentUser.uid).set({ photoURL: url }, {merge:true});
 
