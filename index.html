@@ -2363,6 +2363,17 @@ main *{overflow-wrap:break-word;}
         </div>
       </div>
     </div>
+
+    <!-- DELETE ACCOUNT (required by Google Play). Keeps match and payment records for disputes. -->
+    <div class="card" id="deleteAccountCard" style="margin-top:14px;">
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px;">Delete account</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;">
+        This removes your profile and sign-in. Match and payment records are kept where the law or a dispute requires it.
+        You must withdraw any wallet balance and finish any active challenges first.
+      </div>
+      <div id="deleteAccountMsg" style="display:none;margin-top:10px;font-size:13px;"></div>
+      <button class="ghost" id="deleteAccountBtn" style="margin-top:12px;border-color:var(--danger);color:var(--danger);" onclick="deleteMyAccount()">Delete my account</button>
+    </div>
   </section>
 
   <!-- FEEDBACK -->
@@ -10218,7 +10229,8 @@ async function loadChallenges(){
       }
     } else if(c.status === 'active'){
       statusPill = '<span class="status-pill status-confirmed">Active — play &amp; report</span>';
-      actions = `<button class="ghost" onclick="goReportChallenge('${id}')">Report result</button>
+      actions = `<button class="ghost" onclick="openMatchRoom('${id}')">Match room</button>
+        <button class="ghost" onclick="goReportChallenge('${id}')">Report result</button>
         <button class="ghost" onclick="openChallengeChat('${id}')">💬 Chat</button>
         <button class="ghost" onclick="openVoiceChat('${id}')">🎤 Voice chat</button>`;
     } else if(c.status === 'declined' || c.status === 'cancelled'){
@@ -12700,6 +12712,236 @@ document.addEventListener("dblclick",function(e){e.preventDefault();},{passive:f
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
 })();
+</script>
+<script>
+/* ===== MATCH ROOM: ready check for active 1v1 challenges =====
+   Server-side truth lives in the challenge document:
+     readyChallenger / readyOpponent : true once that player taps "I'm ready"
+     matchStartedAt                   : server timestamp, set ONCE when both are ready
+   The countdown is computed from matchStartedAt, so both phones show the same time.
+   Nothing here moves money. Payments and payouts are untouched. */
+
+// Fill these in when you have verified links. Leave blank to show no button.
+// storeUrl: the official Play Store / App Store page for each game.
+// openUrl : an official deep link that opens the installed game (only if verified).
+const VL_GAME_LINKS = {
+  efootball:  { name: 'eFootball',             storeUrl: '', openUrl: '' },
+  codm:       { name: 'Call of Duty Mobile',   storeUrl: '', openUrl: '' },
+  freefire:   { name: 'Free Fire',             storeUrl: '', openUrl: '' },
+  pubgm:      { name: 'PUBG Mobile',           storeUrl: '', openUrl: '' }
+};
+function vlGameKey(gameName){
+  const g = String(gameName || '').toLowerCase();
+  if(g.indexOf('efootball') !== -1) return 'efootball';
+  if(g.indexOf('call of duty') !== -1) return 'codm';
+  if(g.indexOf('free fire') !== -1) return 'freefire';
+  if(g.indexOf('pubg') !== -1) return 'pubgm';
+  return null;
+}
+
+let vlRoomUnsub = null, vlRoomTick = null, vlRoomId = null;
+
+function closeMatchRoom(){
+  if(vlRoomUnsub){ try{ vlRoomUnsub(); }catch(e){} vlRoomUnsub = null; }
+  if(vlRoomTick){ clearInterval(vlRoomTick); vlRoomTick = null; }
+  const ov = document.getElementById('vlRoom');
+  if(ov) ov.remove();
+  vlRoomId = null;
+}
+
+function openMatchRoom(challengeId){
+  if(!currentUser){ alert('Please sign in first.'); return; }
+  closeMatchRoom();
+  vlRoomId = challengeId;
+  const ov = document.createElement('div');
+  ov.id = 'vlRoom';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  ov.setAttribute('aria-label','Match room');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:600;display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML = '<div id="vlRoomCard" style="width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:#0f1620;border:1px solid #223041;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));color:#e8edf3;font-family:inherit;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-weight:700;font-size:16px;letter-spacing:.3px;">Match room</div>'
+    + '<button id="vlRoomClose" aria-label="Close match room" style="background:none;border:0;color:#9aa7b5;font-size:22px;cursor:pointer;padding:4px 8px;">&times;</button></div>'
+    + '<div id="vlRoomBody"><div style="color:#9aa7b5;font-size:14px;">Connecting to the match&hellip;</div></div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('vlRoomClose').addEventListener('click', closeMatchRoom);
+  ov.addEventListener('click', e => { if(e.target === ov) closeMatchRoom(); });
+
+  vlRoomUnsub = db.collection('challenges').doc(challengeId).onSnapshot(
+    snap => vlRenderRoom(snap),
+    err => {
+      const b = document.getElementById('vlRoomBody');
+      if(b) b.innerHTML = '<div style="color:#ff6b6b;font-size:14px;">Could not load this match. Check your connection and try again.</div>';
+    }
+  );
+}
+
+function vlRenderRoom(snap){
+  const body = document.getElementById('vlRoomBody');
+  if(!body) return;
+  if(vlRoomTick){ clearInterval(vlRoomTick); vlRoomTick = null; }
+  const c = snap.exists ? snap.data() : null;
+  const isC = c && c.challengerId === currentUser.uid;
+  const isO = c && c.opponentId === currentUser.uid;
+  if(!c || (!isC && !isO)){
+    body.innerHTML = '<div style="color:#ff6b6b;font-size:14px;">This match is not available to you.</div>';
+    return;
+  }
+  if(c.status !== 'active'){
+    body.innerHTML = '<div style="color:#9aa7b5;font-size:14px;">This challenge is not active any more (status: ' + escapeHtml(String(c.status)) + ').</div>';
+    return;
+  }
+  const myName = isC ? c.challengerGamertag : c.opponentGamertag;
+  const otherName = isC ? c.opponentGamertag : c.challengerGamertag;
+  const myReady = isC ? c.readyChallenger === true : c.readyOpponent === true;
+  const otherReady = isC ? c.readyOpponent === true : c.readyChallenger === true;
+  const bothReady = c.readyChallenger === true && c.readyOpponent === true;
+  const gameKey = vlGameKey(c.game);
+  const game = gameKey ? VL_GAME_LINKS[gameKey] : { name: c.game || 'your game', storeUrl:'', openUrl:'' };
+
+  const player = (name, ready, you) =>
+    '<div style="flex:1;min-width:0;background:#152130;border:1px solid ' + (ready ? '#2fbf71' : '#2a3a4d') + ';border-radius:12px;padding:12px;">'
+    + '<div style="font-size:12px;color:#9aa7b5;">' + (you ? 'You' : 'Opponent') + '</div>'
+    + '<div style="font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(String(name || '')) + '</div>'
+    + '<div style="margin-top:6px;font-size:13px;font-weight:700;color:' + (ready ? '#2fbf71' : '#e0a526') + ';">' + (ready ? 'READY' : 'NOT READY') + '</div></div>';
+
+  let main = '';
+  if(bothReady && c.matchStartedAt){
+    // Countdown from the server timestamp, so both phones agree on when the game can open.
+    const startMs = c.matchStartedAt.toMillis() + 5000;
+    main = '<div id="vlCountdown" style="text-align:center;font-size:44px;font-weight:800;margin:14px 0;">5</div>'
+         + '<div id="vlGameArea"></div>';
+    const paint = () => {
+      const left = Math.ceil((startMs - Date.now()) / 1000);
+      const cd = document.getElementById('vlCountdown');
+      const area = document.getElementById('vlGameArea');
+      if(!cd || !area) return;
+      if(left > 0){ cd.textContent = String(left); area.innerHTML = ''; return; }
+      cd.textContent = 'GO';
+      cd.style.color = '#2fbf71';
+      area.innerHTML = vlGameButtonsHtml(game, c.game);
+      if(vlRoomTick){ clearInterval(vlRoomTick); vlRoomTick = null; }
+    };
+    paint();
+    vlRoomTick = setInterval(paint, 250);
+  } else if(bothReady){
+    main = '<div style="text-align:center;color:#e0a526;font-size:14px;margin:14px 0;">Both ready. Starting&hellip;</div>';
+  } else if(myReady){
+    main = '<div style="text-align:center;margin:14px 0;"><div style="font-weight:700;font-size:15px;">YOU ARE READY</div>'
+         + '<div style="color:#9aa7b5;font-size:13px;margin-top:4px;">Waiting for ' + escapeHtml(String(otherName || 'your opponent')) + ' to tap I\'m ready. The match starts when you are both ready.</div></div>';
+  } else {
+    main = '<div style="text-align:center;margin:14px 0;color:#9aa7b5;font-size:13px;">'
+         + (otherReady ? escapeHtml(String(otherName || 'Your opponent')) + ' is ready. Tap <b style="color:#e8edf3;">I\'m ready</b> to start.' : 'Tap <b style="color:#e8edf3;">I\'m ready</b> when you are set to play.')
+         + '</div>';
+  }
+
+  const readyBtn = (!myReady && !bothReady)
+    ? '<button id="vlReadyBtn" style="width:100%;min-height:52px;border-radius:12px;border:0;background:linear-gradient(90deg,#c8ff3d,#34e6d8);color:#0b0f14;font-weight:800;font-size:16px;cursor:pointer;">I\'m ready</button>'
+    : '';
+
+  body.innerHTML =
+    '<div style="font-size:13px;color:#9aa7b5;margin-bottom:10px;">' + escapeHtml(String(c.game || '')) + ' &middot; GHS ' + escapeHtml(String(c.stakeGHS != null ? c.stakeGHS : 0)) + '</div>'
+    + '<div style="display:flex;gap:10px;align-items:stretch;">' + player(myName, myReady, true)
+    + '<div style="align-self:center;font-weight:800;color:#9aa7b5;">VS</div>' + player(otherName, otherReady, false) + '</div>'
+    + main + readyBtn;
+
+  const btn = document.getElementById('vlReadyBtn');
+  if(btn){
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.textContent = 'Saving\u2026';
+      try{
+        await vlSetReady(vlRoomId);
+      }catch(err){
+        btn.disabled = false; btn.textContent = "I'm ready";
+        alert('Could not save your ready status. ' + (err && err.message ? err.message : 'Please try again.'));
+      }
+    });
+  }
+}
+
+function vlGameButtonsHtml(game, rawName){
+  const name = escapeHtml(String(game.name || rawName || 'the game'));
+  let html = '<div style="text-align:center;margin-top:10px;">'
+    + '<div style="font-weight:700;font-size:15px;margin-bottom:8px;">Match is live. Open ' + name + ' now.</div>';
+  if(game.openUrl){
+    html += '<a href="' + escapeHtml(game.openUrl) + '" style="display:block;min-height:52px;line-height:52px;border-radius:12px;background:#c8ff3d;color:#0b0f14;font-weight:800;text-decoration:none;">OPEN ' + name.toUpperCase() + '</a>';
+  } else {
+    html += '<div style="color:#9aa7b5;font-size:13px;margin-bottom:8px;">Open ' + name + ' from your phone\'s app menu.</div>';
+  }
+  if(game.storeUrl){
+    html += '<a href="' + escapeHtml(game.storeUrl) + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;color:#34e6d8;font-size:13px;">Get ' + name + ' from the store</a>';
+  }
+  html += '<div style="color:#9aa7b5;font-size:12px;margin-top:12px;">Play in ' + name + ', then come back here to submit your result.</div></div>';
+  return html;
+}
+
+async function vlSetReady(challengeId){
+  const uid = currentUser.uid;
+  const ref = db.collection('challenges').doc(challengeId);
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const c = snap.exists ? snap.data() : null;
+    if(!c) throw new Error('This match no longer exists.');
+    if(c.status !== 'active') throw new Error('This challenge is not active.');
+    const isC = c.challengerId === uid;
+    const isO = c.opponentId === uid;
+    if(!isC && !isO) throw new Error('You are not a player in this match.');
+    const update = isC ? { readyChallenger: true } : { readyOpponent: true };
+    const bothNow = (isC ? true : c.readyChallenger === true) && (isO ? true : c.readyOpponent === true);
+    if(bothNow && !c.matchStartedAt){
+      update.matchStartedAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+    tx.update(ref, update);
+  });
+}
+/* ===== end MATCH ROOM ===== */
+
+</script>
+<script>
+/* DELETE ACCOUNT: user removes their own profile and sign-in.
+   Blocked if money is still in the wallet or a challenge is active. */
+async function deleteMyAccount(){
+  const msg = document.getElementById('deleteAccountMsg');
+  const btn = document.getElementById('deleteAccountBtn');
+  const show = (t, color) => { msg.style.display='block'; msg.style.color = color || 'var(--muted)'; msg.textContent = t; };
+  if(!currentUser){ show('Please sign in first.', 'var(--danger)'); return; }
+  const typed = prompt('This permanently deletes your Vigileon League account. Type DELETE to confirm.');
+  if(typed !== 'DELETE'){ show('Account not deleted.'); return; }
+  btn.disabled = true; show('Checking your account…');
+  try{
+    const uid = currentUser.uid;
+    const userSnap = await db.collection('users').doc(uid).get();
+    const u = userSnap.exists ? userSnap.data() : {};
+    if((u.walletBalance || 0) > 0){
+      btn.disabled = false;
+      show('You still have GHS ' + Number(u.walletBalance).toFixed(2) + ' in your wallet. Withdraw it first, then delete your account.', 'var(--danger)');
+      return;
+    }
+    const active = await db.collection('challenges').where('status','==','active')
+      .where('challengerId','==',uid).limit(1).get();
+    const active2 = await db.collection('challenges').where('status','==','active')
+      .where('opponentId','==',uid).limit(1).get();
+    if(!active.empty || !active2.empty){
+      btn.disabled = false;
+      show('You have an active challenge. Finish or report it first, then delete your account.', 'var(--danger)');
+      return;
+    }
+    // Remove profile data the user owns
+    await db.collection('users').doc(uid).delete();
+    // Remove the sign-in itself
+    await auth.currentUser.delete();
+    show('Your account has been deleted.');
+  }catch(err){
+    btn.disabled = false;
+    if(err && err.code === 'auth/requires-recent-login'){
+      show('For your safety, sign in again, then tap Delete my account once more.', 'var(--danger)');
+      try{ await auth.signOut(); }catch(e){}
+    } else {
+      show('Could not delete your account: ' + (err && err.message ? err.message : 'please try again.'), 'var(--danger)');
+    }
+  }
+}
 </script>
 </body>
 </html>
