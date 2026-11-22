@@ -996,6 +996,12 @@ body{overflow-x:clip;max-width:100%;overscroll-behavior-x:none;}
 main{min-width:0;max-width:100%;}
 img,video,canvas{max-width:100%;}
 main *{overflow-wrap:break-word;}
+/* PLAY MODE (Google Play build only): hide 1v1 + wallet entry points. Normal website is unchanged. */
+html.play-mode [onclick*="showView('wallet')"],
+html.play-mode [onclick*="showView('challenges')"],
+html.play-mode .hero-art,
+html.play-mode #onboardingCard,
+html.play-mode .hero-cta button[onclick*="challenges"]{display:none !important;}
 </style>
 </head>
 <body>
@@ -2860,13 +2866,40 @@ let adminCheckCache = {};
    standard Firebase presence pattern.
    Status lives at /status/{uid} = { state: 'online'|'offline', last_changed, gamertag }. */
 
+// A player counts as online only if they are marked online AND their heartbeat is recent.
+// This stops stale "online" flags (phone sleeping, app closed, lost connection) from showing.
+const PRESENCE_STALE_MS = 120000;
+function isStatusOnline(st){
+  if(!st || st.state !== 'online') return false;
+  if(typeof st.last_seen !== 'number') return false;
+  return (Date.now() - st.last_seen) < PRESENCE_STALE_MS;
+}
+let presenceHeartbeat = null;
+let presenceVisHandler = null;
+
 async function setupPresence(){
   if(!currentUser || !rtdb) return;
   const myStatusRef = rtdb.ref('/status/' + currentUser.uid);
   const myGamertag = await getMyGamertag();
 
   const offlineStatus = { state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP, gamertag: myGamertag };
-  const onlineStatus = { state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP, gamertag: myGamertag };
+  const onlineStatus = { state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP, last_seen: firebase.database.ServerValue.TIMESTAMP, gamertag: myGamertag };
+
+  if(!presenceVisHandler){
+    presenceVisHandler = ()=>{
+      if(!currentUser || !rtdb) return;
+      const ref = rtdb.ref('/status/' + currentUser.uid);
+      if(document.hidden){
+        if(presenceHeartbeat){ clearInterval(presenceHeartbeat); presenceHeartbeat = null; }
+        ref.set({ state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP, gamertag: myGamertag }).catch(()=>{});
+      } else {
+        ref.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP, last_seen: firebase.database.ServerValue.TIMESTAMP, gamertag: myGamertag }).catch(()=>{});
+        if(presenceHeartbeat) clearInterval(presenceHeartbeat);
+        presenceHeartbeat = setInterval(()=>{ if(!document.hidden) ref.update({ last_seen: firebase.database.ServerValue.TIMESTAMP }).catch(()=>{}); }, 45000);
+      }
+    };
+    document.addEventListener('visibilitychange', presenceVisHandler);
+  }
 
   rtdb.ref('.info/connected').on('value', (snap)=>{
     if(snap.val() === false) return;
@@ -2874,7 +2907,10 @@ async function setupPresence(){
     // BEFORE we mark ourselves online, so there's no window where a dropped connection
     // could leave us stuck showing "online" forever.
     myStatusRef.onDisconnect().set(offlineStatus).then(()=>{
-      myStatusRef.set(onlineStatus).catch(err=>{
+      myStatusRef.set(onlineStatus).then(()=>{
+        if(presenceHeartbeat) clearInterval(presenceHeartbeat);
+        presenceHeartbeat = setInterval(()=>{ if(!document.hidden) myStatusRef.update({ last_seen: firebase.database.ServerValue.TIMESTAMP }).catch(()=>{}); }, 45000);
+      }).catch(err=>{
         // Most common cause: the Realtime Database security rules don't grant write
         // access to /status/{uid} for the signed-in user — this fails silently unless
         // logged, which is exactly the "no one ever shows online" symptom.
@@ -2887,6 +2923,7 @@ async function setupPresence(){
 }
 
 function teardownPresence(){
+  if(presenceHeartbeat){ clearInterval(presenceHeartbeat); presenceHeartbeat = null; }
   if(!currentUser || !rtdb) return;
   try{
     rtdb.ref('/status/' + currentUser.uid).set({
@@ -2908,7 +2945,7 @@ function listenToPresence(uid, callback){
 
 function formatLastSeen(status){
   if(!status) return '';
-  if(status.state === 'online') return 'Online now';
+  if(isStatusOnline(status)) return 'Online now';
   if(!status.last_changed) return 'Offline';
   const diffMs = Date.now() - status.last_changed;
   const mins = Math.floor(diffMs / 60000);
@@ -2929,7 +2966,7 @@ function attachPresenceDots(container){
     if(!uid || el.dataset.presenceBound) return;
     el.dataset.presenceBound = '1';
     const unsub = listenToPresence(uid, (status)=>{
-      const isOnline = status && status.state === 'online';
+      const isOnline = status && isStatusOnline(status);
       el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isOnline ? '#3ECF6A' : '#5B6675'};margin-right:5px;vertical-align:middle;"></span><span style="font-size:11.5px;color:${isOnline ? '#3ECF6A' : 'var(--muted)'};">${isOnline ? 'Online' : formatLastSeen(status)}</span>`;
     });
     activePresenceWatchers.push(unsub);
@@ -2944,11 +2981,17 @@ function detachAllPresenceDots(){
 // cheaper than opening one listener per player, since this is one read that updates
 // whenever ANYONE's status changes, rather than N separate connections.
 let onlineNowUnsub = null;
+let onlineNowRefreshTimer = null;
 function startOnlineNowListener(){
   if(!rtdb || !currentUser) return;
   if(onlineNowUnsub) return; // already running
   const ref = rtdb.ref('/status');
-  const handler = (snap)=> renderOnlineNow(snap.val() || {});
+  let lastStatusData = {};
+  const handler = (snap)=>{ lastStatusData = snap.val() || {}; renderOnlineNow(lastStatusData); };
+  // Re-check freshness every 30s, so a player whose heartbeat stopped drops off the list without anyone else changing.
+  if(!onlineNowRefreshTimer){
+    onlineNowRefreshTimer = setInterval(()=>{ if(onlineNowUnsub && !document.hidden) renderOnlineNow(lastStatusData); }, 30000);
+  }
   const errorHandler = (err)=>{
     console.error('Online Now listener failed — check your Realtime Database rules for /status:', err);
     const list = document.getElementById('onlineNowList');
@@ -2966,6 +3009,7 @@ function startOnlineNowListener(){
 }
 function stopOnlineNowListener(){
   if(onlineNowUnsub){ onlineNowUnsub(); onlineNowUnsub = null; }
+  if(onlineNowRefreshTimer){ clearInterval(onlineNowRefreshTimer); onlineNowRefreshTimer = null; }
   const list = document.getElementById('onlineNowList');
   if(list) list.innerHTML = '';
   const signedOut = document.getElementById('onlineNowSignedOut');
@@ -2986,7 +3030,7 @@ async function renderOnlineNow(allStatus){
   if(errEl) errEl.style.display = 'none';
 
   let onlineEntries = Object.entries(allStatus)
-    .filter(([uid, s])=> s && s.state === 'online' && uid !== currentUser.uid && s.gamertag);
+    .filter(([uid, s])=> s && isStatusOnline(s) && uid !== currentUser.uid && s.gamertag && String(s.gamertag).indexOf('@') === -1);
 
   // Filter out anyone blocked in either direction, so a blocked player doesn't show up
   // here inviting more contact after being blocked.
@@ -3678,11 +3722,11 @@ function renderAuthBox(){
   if(currentUser){
     const email = currentUser.email || 'Signed in';
     const initial = email.trim().charAt(0).toUpperCase() || '?';
-    authBox.innerHTML = `<span class="user-chip" title="${escapeHtml(email)}"><span class="avatar-circle">${escapeHtml(initial)}</span><span class="user-email">${escapeHtml(email)}</span></span><button class="smallbtn" id="signOutBtn">Sign out</button>`;
-    document.getElementById('signOutBtn').onclick = ()=> auth.signOut();
+    authBox.innerHTML = `<span class="user-chip" role="button" tabindex="0" title="Open your profile" onclick="showView('profile')" onkeydown="if(event.key==='Enter')showView('profile')" style="cursor:pointer;"><span class="avatar-circle">${escapeHtml(initial)}</span><span class="user-email">${escapeHtml(email)}</span></span><button class="smallbtn" id="signOutBtn">Sign out</button>`;
+    document.getElementById('signOutBtn').onclick = ()=> confirmSignOut();
     if(smFoot){
       smFoot.innerHTML = `<div class="sm-user"><span class="avatar-circle">${escapeHtml(initial)}</span><div class="sm-user-meta"><div class="sm-user-email">${escapeHtml(email)}</div><div class="sm-user-sub">Signed in</div></div></div><button class="smallbtn" id="signOutBtn2">Sign out</button>`;
-      document.getElementById('signOutBtn2').onclick = ()=> auth.signOut();
+      document.getElementById('signOutBtn2').onclick = ()=> confirmSignOut();
     }
   } else {
     authBox.innerHTML = `<button class="smallbtn" id="signInBtn">Sign in</button>`;
@@ -10836,7 +10880,7 @@ function openChallengeChat(challengeId){
 
   if(challengeChatPresenceUnsub) challengeChatPresenceUnsub();
   challengeChatPresenceUnsub = listenToPresence(challengeChatOtherUid, (status)=>{
-    const isOnline = status && status.state === 'online';
+    const isOnline = status && isStatusOnline(status);
     document.getElementById('challengeChatPresence').innerHTML =
       `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isOnline ? '#3ECF6A' : '#5B6675'};margin-right:5px;vertical-align:middle;"></span><span style="font-size:11.5px;color:${isOnline ? '#3ECF6A' : 'var(--muted)'};">${isOnline ? 'Online now' : formatLastSeen(status)}</span>`;
   });
@@ -11044,6 +11088,7 @@ async function blockUser(targetUid, targetName){
 
 async function unblockUser(targetUid){
   if(!currentUser) return;
+  if(!window.confirm('Unblock this player? They will be able to message you and send challenges again.')) return;
   try{
     await db.collection('blocks').doc(currentUser.uid + '_' + targetUid).delete();
     loadBlockedPlayers();
@@ -11511,7 +11556,7 @@ async function openDmChat(otherUid, otherName){
 
   if(dmChatPresenceUnsub) dmChatPresenceUnsub();
   dmChatPresenceUnsub = listenToPresence(otherUid, (status)=>{
-    const isOnline = status && status.state === 'online';
+    const isOnline = status && isStatusOnline(status);
     document.getElementById('dmChatPresence').innerHTML =
       `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isOnline ? '#3ECF6A' : '#5B6675'};margin-right:5px;vertical-align:middle;"></span><span style="font-size:11.5px;color:${isOnline ? '#3ECF6A' : 'var(--muted)'};">${isOnline ? 'Online now' : formatLastSeen(status)}</span>`;
   });
@@ -12132,6 +12177,7 @@ async function approveVerification(requestId, uid){
   }
 }
 async function rejectVerification(requestId, uid){
+  if(!window.confirm('Reject this ID verification request?')) return;
   const reason = prompt('Optional reason (shown to the player):') || '';
   try{
     await db.collection('verificationRequests').doc(requestId).update({
@@ -12689,6 +12735,13 @@ document.addEventListener("dblclick",function(e){e.preventDefault();},{passive:f
     var set=function(sel,txt){ var e=document.querySelector(sel); if(e) e.textContent=txt; };
     set('#view-tournaments .section-banner-sub','Join free tournaments, play your matches and climb the standings.');
     set('#view-rules .section-banner-sub','Read this before you join a tournament.');
+    var heroP=document.querySelector('#view-leaderboard .hero p'); if(heroP) heroP.textContent='Join free football and shooter tournaments, play your matches, report results and climb the standings.';
+    var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null); var tn;
+    while((tn=walker.nextNode())){
+      if(tn.nodeValue && tn.nodeValue.indexOf('skill-based tournaments and 1v1 challenges')!==-1){
+        tn.nodeValue=tn.nodeValue.replace(/skill-based tournaments and 1v1 challenges across eFootball, Call of Duty & more\.?/,'free tournaments for football and shooter games.');
+      }
+    }
     var ne=document.getElementById('statNetEarnings'); if(ne && ne.parentElement) ne.parentElement.style.setProperty('display','none','important');
     var np=document.getElementById('notifPrefPayouts'); if(np){ var l=np.closest('label')||np.parentElement; if(l) l.style.setProperty('display','none','important'); }
     var money=/entry fee|stake|payout|paystack|refund|prize|wallet|mobile money|\bpot\b|\bpay\b/i;
@@ -12725,10 +12778,11 @@ document.addEventListener("dblclick",function(e){e.preventDefault();},{passive:f
 // storeUrl: the official Play Store / App Store page for each game.
 // openUrl : an official deep link that opens the installed game (only if verified).
 const VL_GAME_LINKS = {
-  efootball:  { name: 'eFootball',             storeUrl: '', openUrl: '' },
-  codm:       { name: 'Call of Duty Mobile',   storeUrl: '', openUrl: '' },
-  freefire:   { name: 'Free Fire',             storeUrl: '', openUrl: '' },
-  pubgm:      { name: 'PUBG Mobile',           storeUrl: '', openUrl: '' }
+  efootball:  { name: 'eFootball',             storeUrl: '', iosUrl: 'https://apps.apple.com/us/app/efootball/id1117270703', openUrl: '' },
+  codm:       { name: 'Call of Duty Mobile',   storeUrl: '', iosUrl: 'https://apps.apple.com/us/app/call-of-duty-mobile/id1287282214', openUrl: '' },
+  freefire:   { name: 'Free Fire',             storeUrl: '', iosUrl: '', openUrl: '' },
+  pubgm:      { name: 'PUBG Mobile',           storeUrl: '', iosUrl: 'https://apps.apple.com/us/app/pubg-mobile/id1330123889', openUrl: '' },
+  mortalkombat: { name: 'Mortal Kombat',       storeUrl: '', iosUrl: 'https://apps.apple.com/us/app/mortal-kombat/id949701151', openUrl: '' }
 };
 function vlGameKey(gameName){
   const g = String(gameName || '').toLowerCase();
@@ -12736,6 +12790,7 @@ function vlGameKey(gameName){
   if(g.indexOf('call of duty') !== -1) return 'codm';
   if(g.indexOf('free fire') !== -1) return 'freefire';
   if(g.indexOf('pubg') !== -1) return 'pubgm';
+  if(g.indexOf('mortal') !== -1) return 'mortalkombat';
   return null;
 }
 
@@ -12870,7 +12925,10 @@ function vlGameButtonsHtml(game, rawName){
     html += '<div style="color:#9aa7b5;font-size:13px;margin-bottom:8px;">Open ' + name + ' from your phone\'s app menu.</div>';
   }
   if(game.storeUrl){
-    html += '<a href="' + escapeHtml(game.storeUrl) + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;color:#34e6d8;font-size:13px;">Get ' + name + ' from the store</a>';
+    html += '<a href="' + escapeHtml(game.storeUrl) + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;color:#34e6d8;font-size:13px;">Get ' + name + ' on Google Play</a>';
+  }
+  if(game.iosUrl){
+    html += '<a href="' + escapeHtml(game.iosUrl) + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;margin-left:14px;color:#34e6d8;font-size:13px;">Get ' + name + ' on the App Store</a>';
   }
   html += '<div style="color:#9aa7b5;font-size:12px;margin-top:12px;">Play in ' + name + ', then come back here to submit your result.</div></div>';
   return html;
@@ -12940,6 +12998,14 @@ async function deleteMyAccount(){
     } else {
       show('Could not delete your account: ' + (err && err.message ? err.message : 'please try again.'), 'var(--danger)');
     }
+  }
+}
+</script>
+<script>
+/* CONFIRM BEFORE SIGN OUT: a stray tap should not sign the player out. */
+function confirmSignOut(){
+  if(window.confirm('Sign out of Vigileon League? Any unsaved changes on this page will be lost.')){
+    auth.signOut();
   }
 }
 </script>
