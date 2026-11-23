@@ -18,7 +18,7 @@
   if(on) document.documentElement.classList.add('play-mode');
   // AI features (Vigileon AI chat, scoreboard reader) stay hidden in the Play app until this is true.
   // Set window.VL_AI_IN_PLAY = true (in this line) and re-upload index.html after the Play app is approved.
-  window.VL_AI_IN_PLAY = false;
+  window.VL_AI_IN_PLAY = true;
   if(on && !window.VL_AI_IN_PLAY) document.documentElement.classList.add('no-ai');
 })();
 </script>
