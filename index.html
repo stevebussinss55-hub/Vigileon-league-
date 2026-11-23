@@ -14,7 +14,7 @@
     if((document.referrer||'').indexOf('android-app://com.vigileon.league')===0) sessionStorage.setItem('vlPlay','1');
     on=sessionStorage.getItem('vlPlay')==='1';
   }catch(e){ on=(document.referrer||'').indexOf('android-app://com.vigileon.league')===0; }
-  window.PLAY_MODE=on;
+  window.PLAY_MODE=0;
   if(on) document.documentElement.classList.add('play-mode');
   // AI features (Vigileon AI chat, scoreboard reader) stay hidden in the Play app until this is true.
   // Set window.VL_AI_IN_PLAY = true (in this line) and re-upload index.html after the Play app is approved.
