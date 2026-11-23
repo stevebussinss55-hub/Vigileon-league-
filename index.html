@@ -2063,6 +2063,8 @@ html.play-mode .hero-cta button[onclick*="challenges"]{display:none !important;}
       <label class="fieldlabel">Proof screenshot</label>
       <input type="file" id="rFile" accept="image/*" class="native-file-input">
       <div id="screenshotPreview"></div>
+      <button type="button" id="rReadScoreBtn" class="ghost" style="margin-top:8px;">Read scoreboard with AI</button>
+      <div id="rScoreSuggest" style="display:none;margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:10px;font-size:13px;"></div>
 
       <div id="highStakeVideoWrap" style="display:none;margin-top:16px;padding:12px;background:rgba(255,200,0,0.06);border:1px dashed #E8B94A;border-radius:8px;">
         <label style="color:#E8B94A;">⚠️ High-stake match — a short video clip is also required</label>
@@ -8298,14 +8300,32 @@ function fitCardFontSize(ctx, text, maxWidth, startSize, minSize, fontSpec){
   return size;
 }
 
+// Champion poster used as the background for win cards and the congratulations screen.
+let winnerBgImg = null;
+function loadWinnerBg(){
+  if(winnerBgImg) return Promise.resolve(winnerBgImg);
+  return new Promise(resolve=>{
+    const im = new Image();
+    im.onload = ()=>{ winnerBgImg = im; resolve(im); };
+    im.onerror = ()=> resolve(null);
+    im.src = '/winner-bg.jpg';
+  });
+}
+
 function drawCardChrome(ctx, kicker){
   // Shared background + header/footer used by every card type, so win cards and
   // achievement cards look like they belong to the same brand.
-  const grad = ctx.createLinearGradient(0, 0, 0, CARD_SIZE);
-  grad.addColorStop(0, '#121722');
-  grad.addColorStop(1, '#0B0F14');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, CARD_SIZE, CARD_SIZE);
+  if(winnerBgImg){
+    ctx.drawImage(winnerBgImg, 0, 0, CARD_SIZE, CARD_SIZE);
+    ctx.fillStyle = 'rgba(11,15,20,0.62)';
+    ctx.fillRect(0, 0, CARD_SIZE, CARD_SIZE);
+  } else {
+    const grad = ctx.createLinearGradient(0, 0, 0, CARD_SIZE);
+    grad.addColorStop(0, '#121722');
+    grad.addColorStop(1, '#0B0F14');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CARD_SIZE, CARD_SIZE);
+  }
 
   ctx.strokeStyle = 'rgba(200,255,61,0.35)';
   ctx.lineWidth = 3;
@@ -8338,6 +8358,7 @@ async function ensureCardFontsLoaded(){
 
 async function renderWinCardBlob(gamertag, opponent, game, scoreline){
   await ensureCardFontsLoaded();
+  await loadWinnerBg();
   const canvas = document.createElement('canvas');
   canvas.width = CARD_SIZE; canvas.height = CARD_SIZE;
   const ctx = canvas.getContext('2d');
@@ -8617,6 +8638,39 @@ document.getElementById('shareFlyerBtn').addEventListener('click', async ()=>{
   const text = `🎮 Join Vigileon League — free tournaments across eFootball, Call of Duty & more!\n\n${siteUrl}`;
   await shareImageOrFallback(lastFlyerBlob, text, 'vigileon-flyer.png');
 });
+
+/* ---------------- CONGRATULATIONS SCREEN ---------------- */
+// Shows the champion poster with a message. Call showWinCelebration({ title, subtitle, onShare }).
+function showWinCelebration(opts){
+  const o = opts || {};
+  const old = document.getElementById('winCelebration');
+  if(old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'winCelebration';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.85);';
+  ov.innerHTML = '<div style="position:relative;width:100%;max-width:420px;border-radius:18px;overflow:hidden;border:1px solid rgba(200,255,61,.45);box-shadow:0 0 40px rgba(200,255,61,.25);">'
+    + '<img src="/winner-bg.jpg" alt="" style="display:block;width:100%;height:auto;">'
+    + '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,15,20,.35),rgba(11,15,20,.85));"></div>'
+    + '<div style="position:absolute;left:0;right:0;bottom:0;padding:20px 18px 18px;text-align:center;color:#fff;">'
+    +   '<div style="font-family:\'IBM Plex Mono\',monospace;color:#C8FF3D;font-size:12px;letter-spacing:2px;">VIGILEON LEAGUE</div>'
+    +   '<div style="font-weight:800;font-size:30px;margin:6px 0 4px;">' + escapeHtml(String(o.title || 'Congratulations!')) + '</div>'
+    +   '<div style="color:#dfe6ee;font-size:15px;margin-bottom:14px;">' + escapeHtml(String(o.subtitle || '')) + '</div>'
+    +   '<div style="display:flex;gap:10px;">'
+    +     '<button id="wcShare" style="flex:1;min-height:48px;border-radius:12px;border:0;background:linear-gradient(90deg,#c8ff3d,#34e6d8);color:#0b0f14;font-weight:800;font-size:15px;cursor:pointer;">Share my win</button>'
+    +     '<button id="wcClose" style="flex:0 0 auto;min-height:48px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-weight:700;cursor:pointer;">Close</button>'
+    +   '</div>'
+    + '</div></div>';
+  document.body.appendChild(ov);
+  const close = ()=> ov.remove();
+  document.getElementById('wcClose').addEventListener('click', close);
+  ov.addEventListener('click', e=>{ if(e.target === ov) close(); });
+  document.getElementById('wcShare').addEventListener('click', async ()=>{
+    if(typeof o.onShare === 'function') await o.onShare();
+  });
+  return ov;
+}
 
 /* ---------------- WHATSAPP SHARE ---------------- */
 async function shareMatchWin(game, opponent, scoreline){
@@ -12623,6 +12677,18 @@ loadAnnouncementBanner();
   // separate widget, a console test, or a future feature that just needs plain Q&A.)
   const plainModel = getGenerativeModel(ai, { model: "gemini-3.5-flash" });
 
+  // Reads the scoreboard in a screenshot. Returns the names and scores the AI can see.
+  // The player still confirms the result, so this is only a suggestion.
+  window.vlReadScoreboard = async function(base64, mimeType){
+    const prompt = 'This is a screenshot of a match result from a mobile game (eFootball or Call of Duty). ' +
+      'Read the two player names and the final score. Reply with ONLY a JSON object, no other text, in this shape: ' +
+      '{"player1":"name","score1":0,"player2":"name","score2":0,"confident":true}. ' +
+      'Use null for any value you cannot read clearly, and set confident to false if the screen is blurry or unclear.';
+    const result = await plainModel.generateContent([prompt, { inlineData: { data: base64, mimeType: mimeType || 'image/jpeg' } }]);
+    const text = result.response.text().replace(/```json|```/g,'').trim();
+    return JSON.parse(text);
+  };
+
   export async function askAI(prompt) {
     const result = await plainModel.generateContent(prompt);
     return result.response.text();
@@ -13211,6 +13277,67 @@ function buildAllGamePickers(){
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildAllGamePickers);
 else buildAllGamePickers();
+</script>
+<script>
+/* SCOREBOARD SUGGESTION: the AI reads the screenshot; the player must still confirm the result. */
+(function(){
+  function fileToBase64(file){
+    return new Promise((resolve,reject)=>{
+      const r = new FileReader();
+      r.onload = ()=> resolve(String(r.result).split(',')[1]);
+      r.onerror = ()=> reject(new Error('Could not read the picture.'));
+      r.readAsDataURL(file);
+    });
+  }
+  function bind(){
+    const btn = document.getElementById('rReadScoreBtn');
+    if(!btn || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', async ()=>{
+      const box = document.getElementById('rScoreSuggest');
+      const file = document.getElementById('rFile').files[0];
+      box.style.display = 'block';
+      if(!file){ box.textContent = 'Choose a screenshot first, then tap Read scoreboard.'; return; }
+      if(!window.vlReadScoreboard){ box.textContent = 'The AI is not ready yet. Try again in a moment.'; return; }
+      box.textContent = 'Reading the scoreboard…';
+      try{
+        const b64 = await fileToBase64(file);
+        const r = await window.vlReadScoreboard(b64, file.type);
+        if(!r || r.score1 == null || r.score2 == null || !r.player1 || !r.player2){
+          box.textContent = "I couldn't read the scoreboard clearly. Please type the score yourself.";
+          return;
+        }
+        const me = (document.getElementById('gamertagInput').value || '').trim().toLowerCase();
+        const iAmFirst = me && String(r.player1).trim().toLowerCase() === me;
+        const iAmSecond = me && String(r.player2).trim().toLowerCase() === me;
+        const myScore = iAmFirst ? r.score1 : (iAmSecond ? r.score2 : null);
+        const theirScore = iAmFirst ? r.score2 : (iAmSecond ? r.score1 : null);
+        const score = r.score1 + ' - ' + r.score2;
+        box.innerHTML = '<div style="margin-bottom:8px;">The screenshot shows <b>' + escapeHtml(String(r.player1)) + ' ' + r.score1 + ' – ' + r.score2 + ' ' + escapeHtml(String(r.player2)) + '</b>.' +
+          (r.confident === false ? ' <span style="color:var(--muted);">The AI is not fully sure, so check it carefully.</span>' : '') + '</div>' +
+          '<button type="button" id="rUseScore" class="primary" style="min-height:40px;">Use this score</button> ' +
+          '<button type="button" id="rIgnoreScore" class="ghost" style="min-height:40px;">Ignore</button>' +
+          '<div style="margin-top:8px;color:var(--muted);font-size:12px;">Your opponent still has to confirm the result.</div>';
+        document.getElementById('rUseScore').addEventListener('click', ()=>{
+          document.getElementById('rScoreline').value = score;
+          if(myScore !== null && theirScore !== null){
+            const winRadio = document.querySelector('input[name="result"][value="win"]');
+            const lossRadio = document.querySelector('input[name="result"][value="loss"]');
+            if(myScore > theirScore){ winRadio.checked = true; } else if(myScore < theirScore){ lossRadio.checked = true; }
+            document.getElementById('winLabel').classList.toggle('checked', winRadio.checked);
+            document.getElementById('lossLabel').classList.toggle('checked', lossRadio.checked);
+          }
+          box.textContent = 'Score filled in. Check it, then submit.';
+        });
+        document.getElementById('rIgnoreScore').addEventListener('click', ()=>{ box.style.display = 'none'; });
+      }catch(e){
+        box.textContent = 'The AI could not read the picture: ' + (e && e.message ? e.message : e);
+      }
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
 </script>
 </body>
 </html>
