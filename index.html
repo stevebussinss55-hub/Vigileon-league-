@@ -16,6 +16,10 @@
   }catch(e){ on=(document.referrer||'').indexOf('android-app://com.vigileon.league')===0; }
   window.PLAY_MODE=on;
   if(on) document.documentElement.classList.add('play-mode');
+  // AI features (Vigileon AI chat, scoreboard reader) stay hidden in the Play app until this is true.
+  // Set window.VL_AI_IN_PLAY = true (in this line) and re-upload index.html after the Play app is approved.
+  window.VL_AI_IN_PLAY = false;
+  if(on && !window.VL_AI_IN_PLAY) document.documentElement.classList.add('no-ai');
 })();
 </script>
 <style>
@@ -997,6 +1001,9 @@ main{min-width:0;max-width:100%;}
 img,video,canvas{max-width:100%;}
 main *{overflow-wrap:break-word;}
 /* PLAY MODE (Google Play build only): hide 1v1 + wallet entry points. Normal website is unchanged. */
+html.no-ai #aiWidgetBtn,
+html.no-ai #rReadScoreBtn,
+html.no-ai #rScoreSuggest{display:none !important;}
 html.play-mode [onclick*="showView('wallet')"],
 html.play-mode [onclick*="showView('challenges')"],
 html.play-mode .hero-art,
@@ -12680,10 +12687,12 @@ loadAnnouncementBanner();
   // Reads the scoreboard in a screenshot. Returns the names and scores the AI can see.
   // The player still confirms the result, so this is only a suggestion.
   window.vlReadScoreboard = async function(base64, mimeType){
-    const prompt = 'This is a screenshot of a match result from a mobile game (eFootball or Call of Duty). ' +
-      'Read the two player names and the final score. Reply with ONLY a JSON object, no other text, in this shape: ' +
-      '{"player1":"name","score1":0,"player2":"name","score2":0,"confident":true}. ' +
-      'Use null for any value you cannot read clearly, and set confident to false if the screen is blurry or unclear.';
+    const prompt = 'This is a screenshot a player uploaded as proof of a match result. ' +
+      'Reply with ONLY a JSON object, no other text, in this shape: ' +
+      '{"game":"eFootball or Call of Duty or other or null","is_result_screen":true,"player1":"name","score1":0,"player2":"name","score2":0,"possibly_edited":false,"reason":"short note","confident":true}. ' +
+      'game: the game shown on screen if you can tell. is_result_screen: false if it is not a match result or scoreboard. ' +
+      'possibly_edited: true if it looks cropped, pasted, or edited, or has mismatched fonts or blurred names. ' +
+      'Use null for any value you cannot read clearly, and set confident to false if unclear.';
     const result = await plainModel.generateContent([prompt, { inlineData: { data: base64, mimeType: mimeType || 'image/jpeg' } }]);
     const text = result.response.text().replace(/```json|```/g,'').trim();
     return JSON.parse(text);
@@ -13279,7 +13288,8 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
 else buildAllGamePickers();
 </script>
 <script>
-/* SCOREBOARD SUGGESTION: the AI reads the screenshot; the player must still confirm the result. */
+/* SCOREBOARD SUGGESTION: the AI reads the screenshot and raises warnings.
+   The player must still confirm the result, and the opponent must confirm too. */
 (function(){
   function fileToBase64(file){
     return new Promise((resolve,reject)=>{
@@ -13288,6 +13298,13 @@ else buildAllGamePickers();
       r.onerror = ()=> reject(new Error('Could not read the picture.'));
       r.readAsDataURL(file);
     });
+  }
+  function sameGame(detected, chosen){
+    const d = String(detected||'').toLowerCase(), c = String(chosen||'').toLowerCase();
+    if(!d || d === 'null' || d === 'other') return null;      // can't tell
+    if(c.indexOf('efootball') !== -1) return d.indexOf('efootball') !== -1;
+    if(c.indexOf('call of duty') !== -1) return d.indexOf('call of duty') !== -1 || d.indexOf('cod') !== -1;
+    return null;                                                 // other games: no check
   }
   function bind(){
     const btn = document.getElementById('rReadScoreBtn');
@@ -13303,23 +13320,37 @@ else buildAllGamePickers();
       try{
         const b64 = await fileToBase64(file);
         const r = await window.vlReadScoreboard(b64, file.type);
+        const warnings = [];
+        const chosenGame = document.getElementById('rGame').value;
+        if(r.is_result_screen === false) warnings.push('This may not be a match result screen.');
+        const gameOk = sameGame(r.game, chosenGame);
+        if(gameOk === false) warnings.push('This looks like ' + escapeHtml(String(r.game)) + ', but you picked ' + escapeHtml(chosenGame) + '.');
+        if(r.possibly_edited === true) warnings.push('The picture may be edited, cropped or unclear. Check it carefully.');
         if(!r || r.score1 == null || r.score2 == null || !r.player1 || !r.player2){
-          box.textContent = "I couldn't read the scoreboard clearly. Please type the score yourself.";
+          box.innerHTML = (warnings.length ? warnings.map(w=>'<div style="color:#E8B94A;margin-bottom:6px;">⚠️ '+w+'</div>').join('') : '') +
+            "I couldn't read the scoreboard clearly. Please type the score yourself.";
           return;
         }
         const me = (document.getElementById('gamertagInput').value || '').trim().toLowerCase();
-        const iAmFirst = me && String(r.player1).trim().toLowerCase() === me;
-        const iAmSecond = me && String(r.player2).trim().toLowerCase() === me;
+        const p1 = String(r.player1).trim(), p2 = String(r.player2).trim();
+        const iAmFirst = me && p1.toLowerCase() === me;
+        const iAmSecond = me && p2.toLowerCase() === me;
         const myScore = iAmFirst ? r.score1 : (iAmSecond ? r.score2 : null);
         const theirScore = iAmFirst ? r.score2 : (iAmSecond ? r.score1 : null);
+        const opponentName = iAmFirst ? p2 : (iAmSecond ? p1 : null);
         const score = r.score1 + ' - ' + r.score2;
-        box.innerHTML = '<div style="margin-bottom:8px;">The screenshot shows <b>' + escapeHtml(String(r.player1)) + ' ' + r.score1 + ' – ' + r.score2 + ' ' + escapeHtml(String(r.player2)) + '</b>.' +
+        const warnHtml = warnings.map(w=>'<div style="color:#E8B94A;margin-bottom:6px;">⚠️ '+w+'</div>').join('');
+        box.innerHTML = warnHtml +
+          '<div style="margin-bottom:8px;">The screenshot shows <b>' + escapeHtml(p1) + ' ' + r.score1 + ' – ' + r.score2 + ' ' + escapeHtml(p2) + '</b>.' +
           (r.confident === false ? ' <span style="color:var(--muted);">The AI is not fully sure, so check it carefully.</span>' : '') + '</div>' +
+          (opponentName ? '<div style="margin-bottom:8px;color:var(--muted);">Opponent: <b>' + escapeHtml(opponentName) + '</b></div>' : '') +
           '<button type="button" id="rUseScore" class="primary" style="min-height:40px;">Use this score</button> ' +
           '<button type="button" id="rIgnoreScore" class="ghost" style="min-height:40px;">Ignore</button>' +
           '<div style="margin-top:8px;color:var(--muted);font-size:12px;">Your opponent still has to confirm the result.</div>';
         document.getElementById('rUseScore').addEventListener('click', ()=>{
           document.getElementById('rScoreline').value = score;
+          const oppBox = document.getElementById('rOpponent');
+          if(opponentName && oppBox && !oppBox.value.trim()) oppBox.value = opponentName;
           if(myScore !== null && theirScore !== null){
             const winRadio = document.querySelector('input[name="result"][value="win"]');
             const lossRadio = document.querySelector('input[name="result"][value="loss"]');
